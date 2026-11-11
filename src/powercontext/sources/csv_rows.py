@@ -91,11 +91,11 @@ def parse_csv_document(value: CSVDocumentInput) -> tuple[CSVRowInput, ...]:
     try:
         text = value.content.decode("utf-8-sig")
     except UnicodeDecodeError as error:
-        raise ValueError(f"CSV document {document_id!r} is not valid UTF-8") from error
+        raise ValueError(f"CSV document {document_id!r} is not valid UTF-8") from error  # noqa: TRY003
     try:
         records = list(csv.reader(io.StringIO(text, newline=""), strict=True))
     except csv.Error as error:
-        raise ValueError(f"CSV document {document_id!r} is malformed: {error}") from error
+        raise ValueError(f"CSV document {document_id!r} is malformed: {error}") from error  # noqa: TRY003
     if not records:
         raise ValueError(f"CSV document {document_id!r} has no header record")  # noqa: TRY003
     header = records[0]
@@ -208,9 +208,7 @@ class CSVRowSourceDefinition:
         )
 
 
-CSV_ROW_SOURCE_DEFINITION: SourceDefinition[CSVRowInput, CSVRowSource, CSVRowInput] = (
-    CSVRowSourceDefinition()
-)
+CSV_ROW_SOURCE_DEFINITION: SourceDefinition[CSVRowInput, CSVRowSource, CSVRowInput] = CSVRowSourceDefinition()
 """Definition used to capture CSV rows and project their evidence."""
 
 

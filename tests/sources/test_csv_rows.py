@@ -34,9 +34,7 @@ from powercontext.sources.projections import TEXT_EVIDENCE_PROJECTION_KEY, TextE
 
 
 def _parse(content: bytes, *, document_id: str = "doc", primary_key: str = "id"):
-    return parse_csv_document(
-        CSVDocumentInput(document_id=document_id, primary_key=primary_key, content=content)
-    )
+    return parse_csv_document(CSVDocumentInput(document_id=document_id, primary_key=primary_key, content=content))
 
 
 def test_bom_and_multiline_quoted_values_are_preserved():
@@ -144,18 +142,16 @@ def test_projection_keeps_column_order_and_value_types():
         primary_key="id",
         primary_key_value="001",
         columns=("id", "name", "empty"),
-        values=("001", "Naatsisʼáán", ""),
+        values=("001", "Naatsisʼáán", ""),  # noqa: RUF001 - keep the original characters.
     )
     source = asyncio.run(registry.resolve(row))
 
-    evidence = TextEvidence.model_validate(
-        registry.project(source, TEXT_EVIDENCE_PROJECTION_KEY)
-    )
+    evidence = TextEvidence.model_validate(registry.project(source, TEXT_EVIDENCE_PROJECTION_KEY))
 
     assert evidence.source_type == "csv-row"
     assert evidence.source_id == "csv:doc:001"
     assert evidence.content == json.dumps(
-        {"id": "001", "name": "Naatsisʼáán", "empty": ""},
+        {"id": "001", "name": "Naatsisʼáán", "empty": ""},  # noqa: RUF001 - keep the original characters.
         ensure_ascii=False,
         separators=(",", ":"),
     )
