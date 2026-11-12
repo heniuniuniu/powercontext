@@ -26,20 +26,34 @@
 | seekdb | 资料存储与混合检索（向量 + 全文 + 结构化标签） |
 | PowerContext | 保存并复用用户偏好、任务进展与历史互动 |
 
-## 运行
+## 运行（零依赖，一条命令）
 
 ```bash
 cd qoder
-pip install -r requirements.txt
-export SEEKDB_DSN='root@127.0.0.1:2881/kb'      # 占位值
-export POWERCONTEXT_URL='http://127.0.0.1:8080'  # 占位值
-python server/search.py                          # http://127.0.0.1:8899
-# 另开终端
-python -m http.server 5173 --directory site
+python main.py --selfcheck    # 端到端自检，打印 SELFCHECK PASS 即主流程可运行
+python main.py                # 启动，浏览器打开 http://127.0.0.1:8899/
 ```
 
-浏览器打开 `http://127.0.0.1:5173`。未启动后端时站点自动切到内置示例数据，
-前端交互与验证样例仍可完整体验。
+`main.py` 等价于 `python server/search.py`，只需 Python 3.9+ 标准库，
+**不需要 pip install、不需要数据库、不需要 API Key、不需要另开终端起静态服务器**：
+同一个端口既提供项目网站，也提供 `/health`、`/init`、`/search`、
+`/memory/read`、`/memory/write` 接口。未配置外部服务时，自动使用内置
+5 条示例语料 + 本地 `memory.json`，导入 → 混合检索 → 记忆复用 → 周报草稿
+全流程可完整跑通，并在 `logs/run.log` 留下
+`seekdb.hybrid_search` 与 `powercontext.write` 两条证据。
+
+### 接入真实 seekdb / PowerContext（可选增强）
+
+```bash
+pip install pymysql requests
+export SEEKDB_DSN='user@127.0.0.1:2881/kb'          # 占位值，换成自己的实例
+export POWERCONTEXT_URL='http://127.0.0.1:8080'     # 占位值，换成自己的服务
+python main.py
+```
+
+配置了环境变量且依赖可用时，`/search` 自动改走 seekdb 单条 SQL 的
+向量 + 全文融合检索、PowerContext HTTP 上下文读写；连接失败会自动降级回
+本地路径，主流程不会中断。仓库内不含任何真实凭据。
 
 ## 验证样例
 
