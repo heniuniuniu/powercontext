@@ -1,5 +1,5 @@
 app:
-  description: 输入一个日常离谱辩题，AI 主持人结合 PowerContext 里记住的往期梗和人物设定串场，并把本轮新梗写回记忆，下次接着聊。
+  description: Dify Workflow 应用。输入一个日常离谱辩题，AI 主持人结合 PowerContext 里记住的往期梗和人物设定串场，并把本轮新梗写回 PowerContext 记忆，下次接着聊。记忆的持久化检索由 PowerContext 提供，部署时也可改用 seekdb 作为 Dify 的应用数据库。
   icon: "\U0001F3A4"
   icon_background: '#FFEAD5'
   mode: workflow
@@ -131,8 +131,8 @@ workflow:
           model:
             completion_params: {temperature: 0.85, max_tokens: 700}
             mode: chat
-            name: <在 Dify 里选择已配置的模型>
-            provider: <在 Dify 里选择已配置的供应商>
+            name: gpt-4o-mini
+            provider: langgenius/openai/openai
           prompt_template:
             - id: sys-1
               role: system

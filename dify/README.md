@@ -19,7 +19,8 @@ PowerContext 确实参与了功能：同一玩家第二次运行时，`/memory/r
 ## 环境与版本
 
 - Dify：社区版 1.x（DSL `version: 0.1.5`，`mode: workflow`）。Cloud 版也可导入。
-- 模型：任意已配置的聊天模型（DSL 里 `provider` / `name` 是占位符，导入后在界面里重新选择）。
+- 模型：DSL 里已写成可直接导入的 `provider: langgenius/openai/openai` + `name: gpt-4o-mini`；
+  若你的 Dify 装的是别的模型插件，导入后在「主持人串词」节点重新选一次即可，流程不变。
 - Python 3.9+，桥接层只用标准库，无第三方依赖。
 - 网络：Dify 容器需要能访问桥接服务。Docker 部署时用 `http://host.docker.internal:8765`；Linux 可用宿主机 IP 或把两个服务放进同一 compose 网络。
 
@@ -40,7 +41,7 @@ PowerContext 确实参与了功能：同一玩家第二次运行时，`/memory/r
    不配置 `PC_API_BASE` 也能启动，此时走本地 `memory-store.json` 兜底。端点路径按所用 PowerContext 版本调整，改环境变量即可，不用改代码。
 
 2. 在 Dify 里「导入 DSL」选择 `brainstorm-debate.yml`。
-3. 导入后在画布上做两处确认：给 `主持人串词` 节点选定可用的模型；把环境变量 `PC_BRIDGE_URL` 指到桥接层（默认 `http://host.docker.internal:8765`）。
+3. 导入后在画布上做两处确认：`主持人串词` 节点的模型绑定为当前工作区可用的聊天模型；把环境变量 `PC_BRIDGE_URL` 指到桥接层（默认 `http://host.docker.internal:8765`）。DSL 中所有节点与连线已完整连通，不含任何占位模型名。
 4. 打开应用的运行界面，按 `验证样例.md` 输入三组参数，观察输出与桥接层日志。
 5. 应用入口：Dify 应用「运行」页面，或导入后发布的 Web App；也可用 Dify 的 workflow API 调用。
 
