@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>资料整理助手 · Qoder × PowerContext × seekdb</title>
+<style>
+  :root { font-family: system-ui, -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif; color: #1b2330; background: #f5f7fa; }
+  * { box-sizing: border-box; }
+  body { margin: 0; }
+  header { background: #fff; border-bottom: 1px solid #e3e8ef; padding: 18px 28px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .logo { width: 34px; height: 34px; border-radius: 9px; background: #1f6feb; color: #fff; display: grid; place-items: center; font-weight: 700; }
+  h1 { font-size: 18px; margin: 0; flex: 1; }
+  .tag { font-size: 12px; padding: 4px 10px; border-radius: 999px; background: #eaf2ff; color: #1f6feb; }
+  main { max-width: 1040px; margin: 0 auto; padding: 28px 20px 70px; }
+  .hero { background: linear-gradient(135deg, #1f6feb, #4a9eff); color: #fff; border-radius: 14px; padding: 32px; }
+  .hero h2 { margin: 0 0 10px; font-size: 26px; }
+  .hero p { margin: 0; opacity: .92; line-height: 1.7; }
+  section { background: #fff; border: 1px solid #e3e8ef; border-radius: 12px; padding: 20px 22px; margin-top: 18px; }
+  h3 { margin: 0 0 12px; font-size: 15px; color: #3a4657; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+  .card { border: 1px solid #e6ebf2; border-radius: 9px; padding: 14px; background: #fbfcfe; }
+  .card b { display: block; margin-bottom: 6px; font-size: 14px; }
+  .card span { font-size: 13px; color: #5d6878; line-height: 1.6; }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+  input[type=text] { flex: 1; min-width: 220px; border: 1px solid #d4dce7; border-radius: 7px; padding: 10px 12px; font: inherit; }
+  button { border: 0; border-radius: 7px; padding: 10px 18px; background: #1f6feb; color: #fff; font: inherit; cursor: pointer; }
+  .hit { border-left: 3px solid #1f6feb; background: #f8fafd; padding: 10px 14px; margin: 10px 0; border-radius: 0 6px 6px 0; }
+  .hit small { color: #6a7687; }
+  .memo { background: #fff8e8; border: 1px solid #f3e0b3; border-radius: 8px; padding: 12px 14px; font-size: 13px; line-height: 1.7; }
+  footer { text-align: center; color: #7b8696; font-size: 12px; padding: 20px; }
+  a { color: #1f6feb; }
+  code { background: #eef2f7; padding: 1px 5px; border-radius: 4px; font-size: 12px; }
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">Q</div>
+  <h1>资料整理助手</h1>
+  <span class="tag">Qoder × PowerContext × seekdb</span>
+</header>
+<main>
+  <div class="hero">
+    <h2>别再翻十几个文件找一段笔记</h2>
+    <p>把论文、课程笔记、会议记录导进 seekdb，用向量 + 全文 + 标签一次查到出处；<br />
+       PowerContext 记住你最近在忙什么，下次打开直接接着上次的上下文。</p>
+  </div>
+
+  <section>
+    <h3>解决的问题</h3>
+    <div class="grid">
+      <div class="card"><b>资料散</b><span>笔记、论文、聊天记录分散在不同目录，关键词记不清就找不到。</span></div>
+      <div class="card"><b>重复整理</b><span>同一份资料在项目 A 和项目 B 里被各整理一遍。</span></div>
+      <div class="card"><b>周报费时</b><span>每周要从聊天记录里手工拼出做过什么。</span></div>
+    </div>
+  </section>
+
+  <section>
+    <h3>核心功能（可直接体验）</h3>
+    <div class="row">
+      <input type="text" id="q" value="向量索引刷新" placeholder="试试：混合检索 / 记忆复用 / 周报" />
+      <button id="go">混合检索</button>
+    </div>
+    <div id="hits"></div>
+    <div class="memo" id="memo"></div>
+    <p style="font-size:12px;color:#7b8696;margin:12px 0 0">
+      当前展示的是内置示例数据；启动 <code>python server/search.py</code> 后，
+      同样的查询会走 seekdb 的混合检索 SQL，并把本次主题写入 PowerContext。
+    </p>
+  </section>
+
+  <section>
+    <h3>技术分工</h3>
+    <div class="grid">
+      <div class="card"><b>Qoder</b><span>需求拆解、页面与检索服务编码、调试，以及通过 Sites 发布本项目网站。</span></div>
+      <div class="card"><b>seekdb</b><span>存储切片原文与向量；一次 SQL 内完成向量近邻、全文匹配与标签过滤。</span></div>
+      <div class="card"><b>PowerContext</b><span>保存最近主题、常用标签与未完成任务，跨会话复用并影响排序权重。</span></div>
+    </div>
+  </section>
+
+  <section>
+    <h3>代码与复现</h3>
+    <p style="font-size:13px;line-height:1.8">
+      代码仓库：<a href="https://github.com/heniuniuniu/powercontext/tree/2026-competition-ecosystem/qoder">heniuniuniu/powercontext · qoder/</a><br />
+      运行说明、验证样例与 Qoder 开发记录见仓库 <code>qoder/README.md</code>、
+      <code>qoder/验证样例.md</code>、<code>qoder/Qoder开发记录.md</code>。
+      体验入口即本页的检索框；完整后端启动方式见运行说明。
+    </p>
+  </section>
+</main>
+<footer>Made with Qoder · 资料整理助手</footer>
+<script src="app.js"></script>
+</body>
+</html>
