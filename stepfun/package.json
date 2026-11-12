@@ -1,0 +1,21 @@
+{
+  "name": "stepfun-edge-kb",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Browser-side embedding with WebGPU/WASM fallback + seekdb hybrid retrieval",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "vite build",
+    "dev:server": "node server/seekdb-server.js",
+    "bench": "node src/benchmark-cli.js"
+  },
+  "dependencies": {
+    "@huggingface/transformers": "^3.0.0",
+    "seekdb-js": "^0.1.0",
+    "mysql2": "^3.11.0"
+  },
+  "devDependencies": {
+    "vite": "^5.4.0"
+  }
+}

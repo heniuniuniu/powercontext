@@ -1,0 +1,14 @@
+# command: python -m unittest discover -s tests -v
+# code_version: after
+# exit_code: 0
+
+test_out_of_range_returns_empty (test_order_filter.OrderListTests.test_out_of_range_returns_empty) ... ok
+test_pagination_unchanged (test_order_filter.OrderListTests.test_pagination_unchanged) ... ok
+test_sort_order_unchanged (test_order_filter.OrderListTests.test_sort_order_unchanged) ... ok
+test_status_filter (test_order_filter.OrderListTests.test_status_filter) ... ok
+test_status_filter_before_pagination (test_order_filter.OrderListTests.test_status_filter_before_pagination) ... ok
+
+----------------------------------------------------------------------
+Ran 5 tests in 0.001s
+
+OK

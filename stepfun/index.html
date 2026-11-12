@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>端侧推理 × seekdb 混合检索 · 迷你知识库</title>
+  <style>
+    :root { color-scheme: light; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+    body { margin: 0; background: #f6f7f9; color: #1c2026; }
+    header { display: flex; align-items: center; gap: 16px; padding: 16px 24px; background: #fff; border-bottom: 1px solid #e4e7eb; }
+    h1 { font-size: 17px; margin: 0; flex: 1; }
+    .badge { padding: 5px 12px; border-radius: 999px; font-size: 12px; font-weight: 600; background: #e8f3ff; color: #185fa5; }
+    .badge.warn { background: #fff3e0; color: #9a5b00; }
+    main { max-width: 960px; margin: 24px auto; padding: 0 20px 60px; }
+    section { background: #fff; border: 1px solid #e4e7eb; border-radius: 10px; padding: 18px 20px; margin-bottom: 16px; }
+    h2 { font-size: 14px; margin: 0 0 12px; color: #45505e; }
+    textarea, input[type=text] { width: 100%; box-sizing: border-box; border: 1px solid #d6dbe2; border-radius: 6px; padding: 10px; font: inherit; }
+    textarea { min-height: 96px; }
+    button { border: 0; border-radius: 6px; padding: 9px 16px; font: inherit; cursor: pointer; background: #185fa5; color: #fff; }
+    button:disabled { background: #b9c2cd; cursor: not-allowed; }
+    .row { display: flex; gap: 10px; align-items: center; margin-top: 10px; }
+    .progress { height: 6px; background: #eceff3; border-radius: 4px; overflow: hidden; margin-top: 12px; }
+    .progress > i { display: block; height: 100%; width: 0; background: #185fa5; transition: width .2s; }
+    .hint { font-size: 12px; color: #6a7481; margin-top: 10px; }
+    .result { border-left: 3px solid #185fa5; padding: 8px 12px; margin: 10px 0; background: #f8fafc; }
+    .result small { color: #6a7481; }
+    pre { background: #f8fafc; padding: 12px; overflow-x: auto; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>端侧推理 × seekdb 混合检索 · 迷你知识库</h1>
+    <span id="backend" class="badge">检测推理后端…</span>
+  </header>
+  <main>
+    <section>
+      <h2>1. 导入语料（浏览器本地向量化）</h2>
+      <textarea id="corpus" placeholder="每行一条文档；也可以直接把 .txt/.md 内容粘贴进来"></textarea>
+      <div class="row">
+        <input type="file" id="files" multiple accept=".txt,.md" />
+        <button id="btn-import">导入并写入 seekdb</button>
+      </div>
+      <div class="progress"><i id="bar"></i></div>
+      <div class="hint" id="import-hint">文档与查询的 embedding 均在本机计算，不调用云端推理 API。</div>
+    </section>
+
+    <section>
+      <h2>2. 混合检索（在 seekdb 内完成）</h2>
+      <div class="row">
+        <input type="text" id="query" placeholder="输入查询，例如：向量索引如何刷新" />
+        <button id="btn-search" disabled>检索</button>
+      </div>
+      <div id="results"></div>
+      <div class="hint" id="search-hint"></div>
+    </section>
+
+    <section>
+      <h2>3. 性能与质量</h2>
+      <div class="row"><button id="btn-bench">跑分阶段计时与 Recall@10</button></div>
+      <pre id="bench-out">尚未运行。结果可导出后填入 benchmarks/RESULTS.md。</pre>
+    </section>
+  </main>
+  <script type="module" src="/src/app.js"></script>
+</body>
+</html>
