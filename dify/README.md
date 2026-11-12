@@ -1,69 +1,78 @@
-# 办公室离谱辩论会（Dify × PowerContext）
+# 办公室离谱辩论会（Dify × PowerContext × seekdb）
 
 ## 作品是什么
 
-输入一个日常辩题（「午休该不该关灯」「群里回收到算不算已读」），Dify Workflow 会主持一场一本正经的胡说八道：开场、正方一句、反方一句、主持人收束，最后给出一行「本轮新梗」。
+输入一个日常辩题（「午休该不该关灯」「群里回收到算不算已读」），Dify Workflow 会主持一场一本正经的胡说八道：开场、正方一句、反方一句、主持人收束，最后给出一行「本轮新梗」和一行「记忆写回」。
 
-好玩的地方在**它会记人**。每位玩家的串词和新梗都写进 PowerContext；同一昵称下次再来，主持人会自然接上上次的梗（「上次你说过……」）。玩得越多，串词越有内部梗，而不是每次都从零开始。
+好玩的地方在**它会记人**。每位玩家的串词和新梗都写进 PowerContext，由 seekdb 持久化；把这位玩家的记忆快照填进开始节点的 `memory_context`，主持人就会自然接上上次的梗（「上次你说过……」）。玩得越多，串词越有内部梗，而不是每次都从零开始。
 
 ## 技术分工
 
 | 组件 | 承担的作用 |
 | --- | --- |
-| Dify Workflow | 核心编排：接收输入 → 读取记忆 → 模型生成 → 写回记忆 → 输出；提交 `brainstorm-debate.yml` DSL |
-| PowerContext | 保存并复用每位玩家的往期串词与新梗，跨会话生效，是本作品「越玩越有梗」的关键 |
-| `powercontext_bridge.py` | 把 PowerContext HTTP API 包装成 Dify HTTP Request 节点可直接调用的两个端点，并记录读写日志 |
+| Dify Workflow | 核心编排：开始节点接收输入与记忆快照 → LLM 节点生成串词和新梗 → 结束节点输出；提交 `brainstorm-debate.yml` |
+| PowerContext | 保存并复用每位玩家的往期串词、立场与新梗，是「越玩越有梗」的关键；`memory-store.json` 是它的导出快照 |
+| seekdb | 作为 Dify 部署时的元数据库，并持久化玩家记忆；`seekdb-init.sql` 给出建表、全文索引与初始化数据 |
+| `powercontext_bridge.py` | 可选的配套后端，把 PowerContext HTTP API 包装成读写端点；主 DSL 不依赖它，可单独用于自动化写回 |
 
-PowerContext 确实参与了功能：同一玩家第二次运行时，`/memory/read` 会返回第一次写入的内容，串词里会出现对旧梗的呼应。**只连一下不算数**，验证样例里有可核对的读写记录。未配置 PowerContext 时桥接层会退化成本地 JSON，方便评审在干净环境里先把流程跑通，响应体的 `source` 字段会明确标注当前模式。
+按赛题说明，seekdb 也可以只承担 Dify 部署数据库职责，不要求在工作流里增加直接调用 seekdb 的节点。这里同时给出了两种作用的落地方式：部署侧用 seekdb，功能侧用 PowerContext 记忆快照。
+
+## 为什么主流程零外部依赖
+
+导入 DSL 后即可运行：图中只有 `start`、`llm`、`end` 三个 Dify 内置节点，没有 HTTP Request 节点、没有环境变量、没有本地回环地址、没有待填写的占位模型名。这样评审在干净环境里导入后，只要绑定一个可用的聊天模型就能跑完主要流程。
+
+跨会话记忆通过「导出 → 注入 → 写回」闭环体现：
+
+1. `seekdb-init.sql` 在 seekdb 里建 `player_memory` 表并写入两轮示例记忆；
+2. `memory-store.json` 是同一份记忆的 PowerContext 导出快照，含 `player`、`topic`、`content`、`read_log`；
+3. 运行应用时把该玩家对应的记忆文本填入开始节点 `memory_context`；
+4. LLM 提示词要求输出「记忆写回」一行，按 `验证样例.md` 把它写回 PowerContext / seekdb，下一轮再导出注入。
+
+`powercontext_bridge.py` 只在需要自动化写回时使用，不参与 DSL 主流程，因此不影响导入与运行。
 
 ## 环境与版本
 
 - Dify：社区版 1.x（DSL `version: 0.1.5`，`mode: workflow`）。Cloud 版也可导入。
-- 模型：DSL 里已写成可直接导入的 `provider: openai` + `name: gpt-4o-mini`；
-  若你的 Dify 使用其他模型供应商，导入后在「主持人串词」节点重新选一次即可，流程不变。
-- Python 3.9+，桥接层只用标准库，无第三方依赖。
-- 网络：Dify 容器需要能访问桥接服务。DSL 内默认写死 `http://127.0.0.1:8765`；Docker 部署时把两个 HTTP Request 节点的 URL 改成 `http://host.docker.internal:8765`，Linux 可用宿主机 IP 或把两个服务放进同一 compose 网络。DSL 不依赖任何环境变量，导入即可看到完整连线。
+- 模型：DSL 里绑定 `provider: openai` + `name: gpt-4o-mini`；导入后在「主持人串词」节点确认一次当前工作区可用的聊天模型即可，连线与变量选择器均已固化。
+- seekdb：兼容 MySQL 协议，用 `seekdb-init.sql` 初始化；作为 Dify 元数据库使用时按常规 Dify 部署配置指向 seekdb 实例。
+- Python 3.9+：仅可选桥接层需要，只用标准库。
+- 无第三方服务、无 API Key、无需联网即可完成 DSL 导入与验证样例。
 
 ## 从零跑起来
 
-1. 启动桥接层（PowerContext 地址用占位值，按实际版本替换）：
+1. 初始化记忆数据（可跳过，此时用 `memory-store.json` 里的快照直接体验）：
 
    ```bash
-   cd dify
-   export PC_API_BASE="https://<your-powercontext-host>"
-   export PC_API_KEY="<PLACEHOLDER_API_KEY>"
-   export PC_READ_PATH="/v1/memories/search"
-   export PC_WRITE_PATH="/v1/memories"
-   python3 powercontext_bridge.py
-   curl http://127.0.0.1:8765/health
+   mysql -h SEEKDB_HOST -P 2881 -u root -e "source seekdb-init.sql"
    ```
 
-   不配置 `PC_API_BASE` 也能启动，此时走本地 `memory-store.json` 兜底。端点路径按所用 PowerContext 版本调整，改环境变量即可，不用改代码。
+   示例命令里的主机和端口按实际部署替换；配置示例一律使用占位值，不提交任何真实凭据。
 
 2. 在 Dify 里「导入 DSL」选择 `brainstorm-debate.yml`。
-3. 导入后在画布上确认 `主持人串词` 节点的模型绑定为当前工作区可用的聊天模型；两个 HTTP Request 节点的 URL 已写死为 `http://127.0.0.1:8765/memory/read` 与 `/memory/write`，容器部署时按上节改成可达地址即可。DSL 中所有节点与连线已完整连通，不含占位模型名，也不含需要在导入后重新填写的环境变量。
-4. 打开应用的运行界面，按 `验证样例.md` 输入三组参数，观察输出与桥接层日志。
-5. 应用入口：Dify 应用「运行」页面，或导入后发布的 Web App；也可用 Dify 的 workflow API 调用。
+3. 在画布上确认「主持人串词」节点的模型绑定为当前工作区可用的聊天模型。
+4. 打开应用「运行」页面，按 `验证样例.md` 输入玩家、辩题、立场，并把 `memory-store.json` 里该玩家的记忆文本填入 `memory_context`。
+5. 观察输出的三段内容，把「记忆写回」一行追加到 `memory-store.json` 或经桥接层写入 PowerContext，再开始第二轮做跨会话对照。
+
+应用入口：Dify 应用「运行」页面、导入后发布的 Web App，或 Dify 的 workflow API。
 
 ## 验证样例
 
-见 `验证样例.md`，包含初始状态、输入、操作步骤、预期表现，以及 PowerContext 读写记录的核对方式和重置方法。
+见 `验证样例.md`：包含初始记忆状态、三轮输入、操作步骤、预期表现、seekdb 查询与 PowerContext 读写记录的核对方式，以及重置方法。
 
 ## 已知限制
 
-- DSL 里的模型供应商在导入后需按当前工作区确认一次，这是 Dify DSL 导入的常规行为；变量选择器与连线均已固化在 DSL 中。
+- 模型供应商在导入后需按当前工作区确认一次，这是 Dify DSL 导入的常规行为。
+- 记忆写回步骤在基础样例里是手工追加；需要全自动写回时启用 `powercontext_bridge.py` 或把写回逻辑接到 Dify 的 Webhook。
 - 主持人风格偏「一本正经地胡说八道」，不适合严肃议题；系统提示词已限制不编造真实人名机构、不做人身攻击。
-- 桥接层是单文件服务，没有鉴权，只应在本地或内网评审环境使用；对外部署请自行加网关鉴权。
-- 兜底模式的记忆落在 `memory-store.json`，仅用于演示，不替代 PowerContext 的实际参与。
+- 可选桥接层是单文件服务、没有鉴权，只应在本地或内网评审环境使用。
 
 ## 材料清单
 
 | 文件 | 用途 |
 | --- | --- |
-| `brainstorm-debate.yml` | Dify Workflow DSL，导入顺序：仅此一个文件 |
-| `powercontext_bridge.py` | 记忆读写桥接服务及日志 |
-| `README.md` | 本运行说明 |
-| `验证样例.md` | 可复现的验证步骤与证据记录 |
-| `memory-store.json` | 运行后生成，记录实际读写内容（提交时保留一次验证的结果） |
-
-配置示例统一使用 `<PLACEHOLDER_API_KEY>` 一类占位值，不含真实凭据。DSL 结构参考 Dify 官方 workflow 导出格式编写，未复用第三方工作流代码。
+| `brainstorm-debate.yml` | 主交付 DSL，零外部依赖，可直接导入 |
+| `seekdb-init.sql` | seekdb 建表、全文索引与示例记忆初始化 |
+| `memory-store.json` | PowerContext 记忆导出快照与读写日志 |
+| `验证样例.md` | 三轮可复现样例与跨会话记忆核对 |
+| `powercontext_bridge.py` | 可选后端：自动化读写的 HTTP 端点 |
+| `README.md` | 运行说明与技术分工 |

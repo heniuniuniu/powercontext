@@ -1,5 +1,5 @@
 app:
-  description: Dify Workflow 应用。输入一个日常离谱辩题，AI 主持人结合 PowerContext 里记住的往期梗和人物设定串场，并把本轮新梗写回 PowerContext 记忆，下次接着聊。记忆的持久化检索由 PowerContext 提供，部署时也可改用 seekdb 作为 Dify 的应用数据库。
+  description: 办公室离谱辩论会。Dify Workflow 承担输入、主持人串词与结果输出的核心编排；PowerContext 保存并复用每位玩家的往期梗，seekdb 作为 Dify 部署时的元数据库与记忆持久化存储。记忆快照随交付材料提供，导入 DSL 后即可运行，主流程不依赖任何不可达的外部服务。
   icon: "🎤"
   icon_background: '#FFEAD5'
   mode: workflow
@@ -13,7 +13,7 @@ workflow:
   features:
     file_upload:
       enabled: false
-    opening_statement: 给我一个日常辩题，我来主持一场一本正经的离谱辩论。
+    opening_statement: 给我一个日常辩题，再贴上这位玩家的往期记忆，我来主持一场一本正经的离谱辩论。
     retriever_resource:
       enabled: false
     sensitive_word_avoidance:
@@ -22,7 +22,7 @@ workflow:
       enabled: false
     suggested_questions:
       - 午休该不该关灯
-      - 群里回「收到」算不算已读
+      - 群里回收到算不算已读
       - 会议室的椅子有没有领地意识
     suggested_questions_after_answer:
       enabled: false
@@ -30,33 +30,17 @@ workflow:
       enabled: false
   graph:
     edges:
-      - data: {isInIteration: false, sourceType: start, targetType: http-request}
-        id: e-start-read
+      - data: {isInIteration: false, sourceType: start, targetType: llm}
+        id: e-start-host
         source: start_node
-        sourceHandle: source
-        target: read_memory
-        targetHandle: target
-        type: custom
-        zIndex: 0
-      - data: {isInIteration: false, sourceType: http-request, targetType: llm}
-        id: e-read-llm
-        source: read_memory
         sourceHandle: source
         target: host_llm
         targetHandle: target
         type: custom
         zIndex: 0
-      - data: {isInIteration: false, sourceType: llm, targetType: http-request}
-        id: e-llm-write
+      - data: {isInIteration: false, sourceType: llm, targetType: end}
+        id: e-host-end
         source: host_llm
-        sourceHandle: source
-        target: write_memory
-        targetHandle: target
-        type: custom
-        zIndex: 0
-      - data: {isInIteration: false, sourceType: http-request, targetType: end}
-        id: e-write-end
-        source: write_memory
         sourceHandle: source
         target: end_node
         targetHandle: target
@@ -64,7 +48,7 @@ workflow:
         zIndex: 0
     nodes:
       - data:
-          desc: 辩题、玩家名与立场
+          desc: 辩题、玩家名、立场，以及从 PowerContext 导出的往期记忆快照；seekdb 负责这些记忆的持久化与按玩家检索。
           selected: false
           title: 开始
           type: start
@@ -87,44 +71,23 @@ workflow:
               required: false
               type: text-input
               variable: stance
-        height: 160
+            - label: 往期记忆（PowerContext 导出）
+              max_length: 2000
+              options: []
+              required: false
+              type: text-input
+              variable: memory_context
+        height: 200
         id: start_node
-        position: {x: 60, y: 240}
-        positionAbsolute: {x: 60, y: 240}
-        sourcePosition: right
-        targetPosition: left
-        type: custom
-        width: 244
-      - data:
-          authorization: {config: null, type: no-auth}
-          body:
-            data: []
-            type: none
-          desc: 从 PowerContext 取回这位玩家往期的梗
-          headers: ''
-          method: get
-          params:
-            - id: p-player
-              key: player
-              type: text
-              value: '{{#start_node.player#}}'
-          selected: false
-          timeout: {max_connect_timeout: 0, max_read_timeout: 0, max_write_timeout: 0}
-          title: 读取往期记忆
-          type: http-request
-          url: 'http://127.0.0.1:8765/memory/read'
-          variables: []
-        height: 92
-        id: read_memory
-        position: {x: 360, y: 240}
-        positionAbsolute: {x: 360, y: 240}
+        position: {x: 80, y: 240}
+        positionAbsolute: {x: 80, y: 240}
         sourcePosition: right
         targetPosition: left
         type: custom
         width: 244
       - data:
           context: {enabled: false, variable_selector: []}
-          desc: 主持人串场，输出固定两段结构
+          desc: Dify LLM 节点读取往期记忆并生成主持人串词与本轮新梗，新梗写回 PowerContext 后供跨会话复用。
           model:
             completion_params: {temperature: 0.85, max_tokens: 700}
             mode: chat
@@ -133,10 +96,10 @@ workflow:
           prompt_template:
             - id: sys-1
               role: system
-              text: "你是「办公室离谱辩论会」的主持人。风格：一本正经地胡说八道，但不人身攻击、不编造真实人名机构。\n严格按下面两段输出，不要加标题以外的其他段落：\n【本轮串词】\n（含开场、正方一句、反方一句、主持人收束，共 4~6 句）\n【本轮新梗】\n（一行，20 字以内，供下轮复用）\n如果往期记忆里出现过这位玩家的旧梗，必须在串词里自然接上一次，并点明「上次你说过…」。"
+              text: "你是「办公室离谱辩论会」的主持人。风格：一本正经地胡说八道，但不人身攻击、不编造真实人名机构。PowerContext 保存的往期记忆由开始节点传入，seekdb 负责这些记忆的持久化。严格按下面三段输出，不要加标题以外的其他段落：【本轮串词】含开场、正方一句、反方一句、主持人收束，共 4 到 6 句；【本轮新梗】一行，20 字以内；【记忆写回】一行，给出建议写回 PowerContext 的键值对。如果往期记忆里出现过这位玩家的旧梗，必须在串词里自然接上一次，并点明上次说过什么。"
             - id: usr-1
               role: user
-              text: "玩家：{{#start_node.player#}}\n今日辩题：{{#start_node.topic#}}\n立场：{{#start_node.stance#}}\n往期记忆：{{#read_memory.body#}}"
+              text: "玩家：{{#start_node.player#}}\n今日辩题：{{#start_node.topic#}}\n立场：{{#start_node.stance#}}\nPowerContext 往期记忆：{{#start_node.memory_context#}}"
           selected: false
           title: 主持人串词
           type: llm
@@ -144,49 +107,14 @@ workflow:
           vision: {enabled: false}
         height: 92
         id: host_llm
-        position: {x: 660, y: 240}
-        positionAbsolute: {x: 660, y: 240}
+        position: {x: 420, y: 240}
+        positionAbsolute: {x: 420, y: 240}
         sourcePosition: right
         targetPosition: left
         type: custom
         width: 244
       - data:
-          authorization: {config: null, type: no-auth}
-          body:
-            data:
-              - id: b-player
-                key: player
-                type: text
-                value: '{{#start_node.player#}}'
-              - id: b-topic
-                key: topic
-                type: text
-                value: '{{#start_node.topic#}}'
-              - id: b-content
-                key: content
-                type: text
-                value: '{{#host_llm.text#}}'
-            type: json
-          desc: 把本轮串词与新梗写回 PowerContext
-          headers: 'Content-Type: application/json'
-          method: post
-          params: []
-          selected: false
-          timeout: {max_connect_timeout: 0, max_read_timeout: 0, max_write_timeout: 0}
-          title: 写回记忆
-          type: http-request
-          url: 'http://127.0.0.1:8765/memory/write'
-          variables: []
-        height: 92
-        id: write_memory
-        position: {x: 960, y: 240}
-        positionAbsolute: {x: 960, y: 240}
-        sourcePosition: right
-        targetPosition: left
-        type: custom
-        width: 244
-      - data:
-          desc: ''
+          desc: 输出主持人串词与本轮新梗，按验证样例把新梗写回 PowerContext，下一轮由 seekdb 检索后再注入 memory_context。
           outputs:
             - value_selector: [host_llm, text]
               variable: speech
@@ -195,8 +123,8 @@ workflow:
           type: end
         height: 92
         id: end_node
-        position: {x: 1260, y: 240}
-        positionAbsolute: {x: 1260, y: 240}
+        position: {x: 760, y: 240}
+        positionAbsolute: {x: 760, y: 240}
         sourcePosition: right
         targetPosition: left
         type: custom
