@@ -656,6 +656,11 @@ async def open_builtin_runtime(
         runtime.artifact_processing_supervisor = await resources.enter_async_context(
             _open_artifact_processing_supervisor(config, contexts, processing_bindings, tracing=tracing)
         )
+        runtime._source_count_trigger_bindings = tuple(
+            binding.binding_name
+            for binding in processing_bindings
+            if binding.source_count_threshold is not None and binding.pending_provider is not None
+        )
         contexts.profiles.operation_context = runtime._operation
         if config.handoff_report.enabled:
             runtime.handoff_report = HandoffReportApplication(
@@ -786,6 +791,7 @@ def _artifact_processing_bindings(  # noqa: C901 - validate and assemble one reg
                 pending_provider=None
                 if family == "skill"
                 else SourceProcessingPendingProvider(contexts.database, binding, family),
+                source_count_threshold=getattr(config.runtime, f"{prefix}_source_count_threshold", None),
                 automatic_scope_filter=enabled_profile_scopes if family == "profile" else None,
             )
         )

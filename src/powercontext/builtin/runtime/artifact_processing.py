@@ -67,6 +67,7 @@ from powercontext.builtin.runtime.processing_contracts import (
     ArtifactProcessingWorkerOutcome,
     WorkerEntrypoint,
 )
+from powercontext.builtin.runtime.processing_discovery import CountAdmission
 from powercontext.builtin.runtime.protocols import RuntimeTracing
 
 logger = logging.getLogger(__name__)
@@ -99,6 +100,17 @@ class ArtifactProcessingPendingProvider(Protocol):
         """Return the next keyset position, or None when this pass is complete."""
         ...
 
+    async def admit_due(
+        self,
+        after_scope_id: str | None,
+        limit: int,
+        *,
+        threshold: int,
+        fence: ArtifactProcessingFence,
+    ) -> CountAdmission:
+        """Accept every Scope on one page that holds at least ``threshold`` new Sources."""
+        ...
+
 
 @dataclass(frozen=True, slots=True)
 class ArtifactProcessingBinding:
@@ -114,6 +126,9 @@ class ArtifactProcessingBinding:
     timezone: str = "Asia/Shanghai"
     config_prefix: str | None = None
     pending_provider: ArtifactProcessingPendingProvider | None = None
+    # Independent of any time condition: a Family also starts once this many
+    # Sources are pending past its committed cursor.
+    source_count_threshold: int | None = None
     # Only automatic admission is filtered; already accepted requests retain
     # their own Worker authorization and domain completion semantics.
     automatic_scope_filter: Callable[[AsyncConnection, tuple[str, ...]], Awaitable[frozenset[str]]] | None = None
@@ -138,6 +153,16 @@ class ArtifactProcessingBinding:
                 raise ValueError("interval and cron cannot both be enabled")  # noqa: TRY003
         if self.cron is not None:
             CronTrigger.from_crontab(self.cron, timezone=ZoneInfo(self.timezone))
+        _require_count_threshold(self.source_count_threshold)
+
+
+def _require_count_threshold(value: object) -> None:
+    """Reject anything a count gate cannot compare, including ``True`` and floats."""
+
+    if value is None:
+        return
+    if type(value) is not int or value < 1:
+        raise ValueError("source_count_threshold must be a positive integer")  # noqa: TRY003
 
 
 class _WorkerResultSender(Protocol):
@@ -397,6 +422,9 @@ class _FamilyState:
     scan_in_progress: bool = False
     reconcile_after: str | None = None
     reconcile_complete: bool = False
+    count_after: str | None = None
+    count_generation: int = 0
+    count_seen: int = -1
     notification_at_start: int = 0
     discovery_pending: bool = True
     next_schedule_at: float | None = None
@@ -514,6 +542,7 @@ class ArtifactProcessingSupervisor:
         for name, state in self._families.items():
             if binding_name is None or binding_name == name:
                 state.discovery_pending = True
+                state.count_generation += 1
         self._wake.set()
 
     async def close(self) -> None:
@@ -648,6 +677,8 @@ class ArtifactProcessingSupervisor:
                 state.next_discovery_at = loop.time() + _DISCOVERY_PAGE_DELAY_SECONDS
         else:
             state.reconcile_complete = True
+        if binding.source_count_threshold is not None:
+            await self._discover_count(state)
         # Alternate discovery channels so explicit traffic cannot monopolize admission.
         state.automatic_next = not state.automatic_next
         if state.automatic_next:
@@ -697,6 +728,31 @@ class ArtifactProcessingSupervisor:
         else:
             state.discovery_pending = True
             state.next_discovery_at = asyncio.get_running_loop().time() + _DISCOVERY_PAGE_DELAY_SECONDS
+
+    async def _discover_count(self, state: _FamilyState) -> None:
+        """Accept Scopes whose pending Source count reached the Family threshold."""
+
+        binding = state.binding
+        threshold = binding.source_count_threshold
+        if threshold is None or binding.pending_provider is None:
+            return
+        if state.count_generation == state.count_seen and state.count_after is None:
+            return
+        capacity = self._fresh_capacity(state)
+        if capacity <= 0:
+            return
+        started = state.count_generation
+        page: CountAdmission = await binding.pending_provider.admit_due(
+            state.count_after,
+            min(capacity, _DISCOVERY_PAGE_SIZE),
+            threshold=threshold,
+            fence=self._require_current_fence(),
+        )
+        state.count_after = page.after
+        if page.after is None:
+            state.count_seen = started
+        for scope in page.admitted:
+            self._enqueue(state, scope)
 
     async def _discover_automatic(self, state: _FamilyState) -> None:  # noqa: C901 - bounded admission state
         binding = state.binding

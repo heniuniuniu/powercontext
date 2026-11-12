@@ -16,6 +16,8 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncConnection
 
@@ -24,6 +26,14 @@ from powercontext.builtin.persistence.database import AsyncDatabase
 from powercontext.builtin.persistence.processing_intents import ArtifactProcessingIntentRepository
 from powercontext.builtin.persistence.supervision import ArtifactProcessingFence, ArtifactProcessingLeaseRepository
 from powercontext.builtin.persistence.tables import PROFILE_POLICIES_TABLE, SOURCE_JOURNAL_HEADS_TABLE
+
+
+@dataclass(frozen=True, slots=True)
+class CountAdmission:
+    """One bounded page of Scopes that reached the pending Source count."""
+
+    admitted: tuple[str, ...]
+    after: str | None
 
 
 async def enabled_profile_scopes(connection: AsyncConnection, scope_ids: tuple[str, ...]) -> frozenset[str]:
@@ -53,7 +63,7 @@ class SourceProcessingPendingProvider:
         self._binding = binding_name
         self._family = artifact_family
 
-    async def reconcile(self, after_scope_id: str | None, limit: int, *, fence: ArtifactProcessingFence) -> str | None:
+    def _head_statement(self, after_scope_id: str | None, limit: int):
         heads = SOURCE_JOURNAL_HEADS_TABLE
         statement = select(heads.c.scope_id, heads.c.position).order_by(heads.c.scope_id).limit(limit)
         if after_scope_id is not None:
@@ -61,9 +71,12 @@ class SourceProcessingPendingProvider:
         if self._family == "profile":
             statement = statement.join(PROFILE_POLICIES_TABLE, PROFILE_POLICIES_TABLE.c.scope_id == heads.c.scope_id)
             statement = statement.where(PROFILE_POLICIES_TABLE.c.generation_enabled.is_(True))
+        return statement
+
+    async def reconcile(self, after_scope_id: str | None, limit: int, *, fence: ArtifactProcessingFence) -> str | None:
         async with self._database.transaction() as connection:
             await ArtifactProcessingLeaseRepository().require_fence(connection, fence)
-            rows = (await connection.execute(statement)).all()
+            rows = (await connection.execute(self._head_statement(after_scope_id, limit))).all()
             intents = ArtifactProcessingIntentRepository()
             cursors = SourceCursorRepository()
             for scope, high in rows:
@@ -74,3 +87,40 @@ class SourceProcessingPendingProvider:
                 if intent is None or intent.dirty_generation == intent.clean_generation:
                     await intents.mark_dirty(connection, scope, self._binding)
         return str(rows[-1][0]) if len(rows) == limit else None
+
+    async def admit_due(
+        self,
+        after_scope_id: str | None,
+        limit: int,
+        *,
+        threshold: int,
+        fence: ArtifactProcessingFence,
+    ) -> CountAdmission:
+        """Accept one pass for Scopes holding at least ``threshold`` new Sources.
+
+        Counts come from the persisted journal head and the Family's committed
+        cursor, so a replayed Source identity never adds pending work and a
+        restart sees exactly the same remainder. A Scope with an outstanding
+        request is left alone: the count gate decides admission once, and the
+        accepted window keeps its own completion semantics.
+        """
+
+        async with self._database.transaction() as connection:
+            await ArtifactProcessingLeaseRepository().require_fence(connection, fence)
+            rows = (await connection.execute(self._head_statement(after_scope_id, limit))).all()
+            intents = ArtifactProcessingIntentRepository()
+            cursors = SourceCursorRepository()
+            admitted: list[str] = []
+            for scope, high in rows:
+                cursor = await cursors.load(connection, scope, self._binding)
+                if int(high) - (0 if cursor is None else cursor.cursor.sequence) < threshold:
+                    continue
+                intent = await intents.load(connection, scope, self._binding, for_update=True)
+                if intent is not None and intent.requested_generation != intent.handled_generation:
+                    continue
+                await intents.request(connection, scope, self._binding)
+                admitted.append(str(scope))
+        return CountAdmission(admitted=tuple(admitted), after=str(rows[-1][0]) if len(rows) == limit else None)
+
+
+__all__ = ["CountAdmission", "SourceProcessingPendingProvider", "enabled_profile_scopes"]

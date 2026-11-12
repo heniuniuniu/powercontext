@@ -489,6 +489,7 @@ class ScopedSourceApplication:
                             span.set_attributes({_MEMORY_CAPTURE_SOURCE_COUNT: 1})
             except BaseValueConflictError as error:
                 raise SourceConflictError("identity", error.identity) from None
+            self._runtime._wake_source_count_triggers()
             return SourceReceipt(
                 source_ref=SourceRef(source_type=record.source_type, source_id=record.source_id),
                 sequence=record.position,
@@ -505,6 +506,7 @@ class ScopedSourceApplication:
                 )
                 if span is not None:
                     span.set_attributes({_MEMORY_CAPTURE_SOURCE_COUNT: 1})
+            self._runtime._wake_source_count_triggers()
             return SourceReceipt(source_ref=context.sources.catalog.as_ref(source), sequence=sequence)
 
 
@@ -564,7 +566,11 @@ class ScopedRecordApplication:
         /,
     ) -> ArtifactCreated:
         async with self._runtime._scope_operation(self.scope_id), self._runtime._locked(self.scope_id):
-            return await self._runtime._records().create_artifact(self.scope_id, family, write)
+            created = await self._runtime._records().create_artifact(self.scope_id, family, write)
+        # The lineage-only Source this write appends is a journal entry too, so it
+        # can carry a count-gated Family across its threshold.
+        self._runtime._wake_source_count_triggers()
+        return created
 
     async def get_artifact(self, family: str, artifact_id: str, /) -> ArtifactRecord:
         async with self._runtime._scope_operation(self.scope_id):
@@ -647,13 +653,15 @@ class ScopedRecordApplication:
         /,
     ) -> ArtifactRecord:
         async with self._runtime._scope_operation(self.scope_id), self._runtime._locked(self.scope_id):
-            return await self._runtime._records().replace_artifact(
+            replaced = await self._runtime._records().replace_artifact(
                 self.scope_id,
                 family,
                 artifact_id,
                 expected_etag,
                 write,
             )
+        self._runtime._wake_source_count_triggers()
+        return replaced
 
 
 class RecordApplication:
@@ -3140,6 +3148,7 @@ class BuiltinRuntime:
         self.statistics = StatisticsApplication(self)
         self.handoff_report: HandoffReportApplication | None = None
         self.artifact_processing_supervisor: ArtifactProcessingSupervisors | None = None
+        self._source_count_trigger_bindings: tuple[str, ...] = ()
         self.processor = None if scope_ids is None else ScheduledSourceProcessor(self, scope_ids)
         self.experience_processor = (
             None if scope_ids is None or experience_incubator is None else ScheduledExperienceProcessor(self, scope_ids)
@@ -3154,6 +3163,27 @@ class BuiltinRuntime:
     async def capabilities(self) -> RuntimeCapabilities:
         async with self._operation():
             return self._capabilities
+
+    def _wake_source_count_triggers(self) -> None:
+        """Nudge count-gated Families after a capture appended to the journal.
+
+        A replayed Source identity appends nothing, so the wake is only a hint:
+        admission still re-derives the pending count from the journal head.
+        """
+
+        for binding_name in self._source_count_trigger_bindings:
+            self._wake_supervisor(binding_name, "source.count.wake_failed")
+
+    def _wake_supervisor(self, binding_name: str, event: str) -> None:
+        supervisor = self.artifact_processing_supervisor
+        if supervisor is None:
+            return
+        try:
+            supervisor.wake(binding_name)
+        except Exception as error:
+            log_safely(
+                logger, logging.WARNING, "Artifact processing wake failed", exc_info=error, extra={"event": event}
+            )
 
     async def readiness(self) -> RuntimeReadiness:
         """Check whether the Runtime and its assembled dependencies can accept work."""
