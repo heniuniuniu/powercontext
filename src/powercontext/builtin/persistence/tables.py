@@ -1180,6 +1180,50 @@ RECURRENCE_OBSERVATION_TABLE = Table(
 
 RECURRENCE_TABLES = (RECURRENCE_MATCH_TABLE, RECURRENCE_OBSERVATION_TABLE)
 
+SOURCE_LIFECYCLE_NODES_TABLE = Table(
+    "pc_source_lifecycle_nodes",
+    SHARED_METADATA,
+    Column("scope_id", identity_string(MAX_SCOPE_ID_LENGTH), primary_key=True),
+    Column("node_id", identity_string(256), primary_key=True),
+    Column("family", identity_string(16), nullable=False),
+    Column("policy", identity_string(3)),
+    Column("available", Boolean, nullable=False),
+    Column("native_available", Boolean, nullable=False),
+    Column("source_revision", Integer, nullable=False),
+    Column("event_sequence", Integer, nullable=False),
+    Column("event_reason", String(MAX_SCOPE_SUMMARY_LENGTH)),
+    Column("source_type", identity_string(MAX_SOURCE_TYPE_LENGTH)),
+    Column("source_id", identity_string(MAX_SOURCE_ID_LENGTH)),
+    Column("memory_family", identity_string(MAX_ARTIFACT_FAMILY_LENGTH)),
+    Column("memory_artifact_id", identity_string(MAX_ARTIFACT_ID_LENGTH)),
+    Column("memory_revision", Integer),
+    Column("entry_id", identity_string(128)),
+    Column("entry_version_id", identity_string(128)),
+    Column("topic_family", identity_string(MAX_ARTIFACT_FAMILY_LENGTH)),
+    Column("topic_artifact_id", identity_string(MAX_ARTIFACT_ID_LENGTH)),
+    Column("topic_revision", Integer),
+    CheckConstraint(
+        "family IN ('source', 'memory', 'topic')",
+        name="ck_pc_source_lifecycle_nodes_family",
+    ),
+    CheckConstraint(
+        "policy IS NULL OR policy IN ('all', 'any')",
+        name="ck_pc_source_lifecycle_nodes_policy",
+    ),
+)
+
+SOURCE_LIFECYCLE_EDGES_TABLE = Table(
+    "pc_source_lifecycle_edges",
+    SHARED_METADATA,
+    Column("scope_id", identity_string(MAX_SCOPE_ID_LENGTH), primary_key=True),
+    Column("node_id", identity_string(256), primary_key=True),
+    Column("ordinal", Integer, primary_key=True),
+    Column("parent_id", identity_string(256), nullable=False),
+    CheckConstraint("ordinal >= 0", name="ck_pc_source_lifecycle_edges_ordinal_nonnegative"),
+)
+
+SOURCE_LIFECYCLE_TABLES = (SOURCE_LIFECYCLE_NODES_TABLE, SOURCE_LIFECYCLE_EDGES_TABLE)
+
 BUILTIN_TABLES = (
     SCOPE_TABLES
     + SHARED_TABLES
@@ -1187,5 +1231,6 @@ BUILTIN_TABLES = (
     + MEMORY_TABLES
     + STATISTICS_TABLES
     + RECURRENCE_TABLES
+    + SOURCE_LIFECYCLE_TABLES
     + (ARTIFACT_TAGS_TABLE, DREAM_RUNS_TABLE, RECEIPT_MIGRATION_REVIEW_TABLE)
 )
