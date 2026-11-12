@@ -92,7 +92,7 @@ workflow:
             completion_params: {temperature: 0.85, max_tokens: 700}
             mode: chat
             name: gpt-4o-mini
-            provider: openai
+            provider: langgenius/openai/openai
           prompt_template:
             - id: sys-1
               role: system

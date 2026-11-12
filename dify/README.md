@@ -33,7 +33,7 @@
 ## 环境与版本
 
 - Dify：社区版 1.x（DSL `version: 0.1.5`，`mode: workflow`）。Cloud 版也可导入。
-- 模型：DSL 里绑定 `provider: openai` + `name: gpt-4o-mini`；导入后在「主持人串词」节点确认一次当前工作区可用的聊天模型即可，连线与变量选择器均已固化。
+- 模型：DSL 里绑定 `provider: langgenius/openai/openai` + `name: gpt-4o-mini`；导入后在「主持人串词」节点确认一次当前工作区可用的聊天模型即可，连线与变量选择器均已固化。
 - seekdb：兼容 MySQL 协议，用 `seekdb-init.sql` 初始化；作为 Dify 元数据库使用时按常规 Dify 部署配置指向 seekdb 实例。
 - Python 3.9+：仅可选桥接层需要，只用标准库。
 - 无第三方服务、无 API Key、无需联网即可完成 DSL 导入与验证样例。
