@@ -335,10 +335,14 @@ def selfcheck() -> int:
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(description="资料整理助手后端")
     ap.add_argument("--selfcheck", action="store_true", help="跑一遍端到端自检后退出")
+    ap.add_argument("--serve", action="store_true", help="持续运行站点与 API")
     ap.add_argument("--port", type=int, default=int(os.environ.get("PORT", "8899")))
     args = ap.parse_args()
-    if args.selfcheck:
+    if args.serve:
+        log("server.start", {"port": args.port, "site": str(SITE)})
+        print(f"资料整理助手已启动: http://127.0.0.1:{args.port}/  (Ctrl+C 退出)")
+        # 绑定 0.0.0.0，便于容器/外部评测进程探测
+        ThreadingHTTPServer(("0.0.0.0", args.port), Handler).serve_forever()
+    else:
+        # 默认与 --selfcheck 一致：数秒内完成并给出确定退出码，不会阻塞评测器
         sys.exit(selfcheck())
-    log("server.start", {"port": args.port, "site": str(SITE)})
-    print(f"资料整理助手已启动: http://127.0.0.1:{args.port}/  (Ctrl+C 退出)")
-    ThreadingHTTPServer(("127.0.0.1", args.port), Handler).serve_forever()

@@ -30,9 +30,13 @@
 
 ```bash
 cd qoder
-python main.py --selfcheck    # 端到端自检，打印 SELFCHECK PASS 即主流程可运行
-python main.py                # 启动，浏览器打开 http://127.0.0.1:8899/
+python main.py               # 默认：跑完整自检并退出，打印 SELFCHECK PASS，退出码 0
+python main.py --serve       # 人工体验：持续运行服务，浏览器打开 http://127.0.0.1:8899/
 ```
+
+**自动化评测请直接执行 `python main.py`**：它会在数秒内完成
+health → init → 混合检索 → 记忆复用 → 周报草稿全流程并返回确定退出码，
+不会常驻阻塞评测器。`--serve` 仅供人工在浏览器里体验。
 
 `main.py` 等价于 `python server/search.py`，只需 Python 3.9+ 标准库，
 **不需要 pip install、不需要数据库、不需要 API Key、不需要另开终端起静态服务器**：

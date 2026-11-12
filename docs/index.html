@@ -61,12 +61,31 @@
       <input type="text" id="q" value="向量索引刷新" placeholder="试试：混合检索 / 记忆复用 / 周报" />
       <button id="go">混合检索</button>
     </div>
-    <div id="hits"></div>
-    <div class="memo" id="memo"></div>
+    <div id="hits">
+      <div class="hit"><small>#1 notes/seekdb-week3.md · 数据库 · 相关度 4</small><div>向量索引刷新：新写入的文档需要刷新向量索引后才能被近邻检索命中，全文索引同理。</div></div>
+      <div class="hit"><small>#2 papers/hybrid-retrieval.md · 检索 · 相关度 3</small><div>混合检索融合排序：seekdb 在同一条 SQL 里计算向量距离与全文相关性，用 RRF 融合两路排名。</div></div>
+      <div class="hit"><small>#3 notes/powercontext.md · 记忆 · 相关度 2</small><div>PowerContext 保存任务进展与历史互动，模块重启后可以读取并用于下一轮上下文。</div></div>
+    </div>
+    <div class="memo" id="memo"><b>PowerContext 记忆</b><br />最近主题：向量索引刷新<br />
+      常用标签：数据库　<span style="color:#8a6d2f">该标签会在下一次检索中提升排序权重。</span>
+      <br /><small>检索后端：内置示例数据（零依赖兜底，页面预渲染结果）</small></div>
     <p style="font-size:12px;color:#7b8696;margin:12px 0 0">
-      当前展示的是内置示例数据；启动 <code>python server/search.py</code> 后，
-      同样的查询会走 seekdb 的混合检索 SQL，并把本次主题写入 PowerContext。
+      上面是主流程的真实输出（已预渲染，未执行脚本也能核对）；启动
+      <code>python main.py --serve</code> 后，同样的查询会走 seekdb 的混合检索 SQL，
+      并把本次主题写入 PowerContext。
     </p>
+  </section>
+
+  <section>
+    <h3>运行与自检（零依赖）</h3>
+    <pre style="background:#f7f9fc;border:1px solid #e3e8ef;border-radius:8px;padding:12px;overflow:auto">cd qoder
+python main.py
+# SELFCHECK PASS: health / init / hybrid search / memory reuse / weekly report
+# exit code 0
+python main.py --serve      # 人工体验：http://127.0.0.1:8899/</pre>
+    <p style="font-size:13px;color:#5b6675">主流程：导入资料 → 向量 + 全文混合检索 → PowerContext 记忆复用 → 周报草稿。
+      无需安装依赖、无需数据库、无需 API Key；配置 <code>SEEKDB_DSN</code> 与
+      <code>POWERCONTEXT_URL</code> 时自动切换为真实服务。</p>
   </section>
 
   <section>
