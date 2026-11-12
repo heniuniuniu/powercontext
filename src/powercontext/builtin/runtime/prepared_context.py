@@ -17,9 +17,12 @@
 from __future__ import annotations
 
 import json
+import math
+import re
+from collections import Counter
 from collections.abc import Sequence
 from dataclasses import dataclass, replace
-from itertools import chain
+from itertools import chain, pairwise
 from typing import TypeVar
 
 from powercontext.artifacts import ArtifactAddress, ArtifactRef
@@ -47,6 +50,12 @@ _ELLIPSIS = "…"
 _BEGIN_MARKER = "BEGIN_POWERCONTEXT_PREPARED_CONTEXT_V1"
 _END_MARKER = "END_POWERCONTEXT_PREPARED_CONTEXT_V1"
 _Item = TypeVar("_Item")
+_TOKEN_PATTERN = re.compile(r"[a-z]+|\d+")
+_SENTENCE_TERMINATORS = frozenset(".!?\u3002\uff01\uff1f")
+_SENTENCE_CLOSERS = frozenset("\"'\u201d\u2019)]}")
+_MAX_UNIT_CHARS = 400
+_UNIT_TARGET_CHARS = 320
+_MAX_MERGE_GAP_CHARS = 24
 
 
 @dataclass(frozen=True)
@@ -106,6 +115,7 @@ class PreparedContextBuild:
     origins: tuple[PreparedContextOrigin, ...]
     omissions: PreparedContextOmissions = PreparedContextOmissions()
     code_origins: tuple[CodeEvidenceRef, ...] = ()
+    fragments: tuple[PreparedFragment, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -118,6 +128,40 @@ class MemoryEntryAddress:
 
 
 PreparedContextOrigin = MemoryCitation | ArtifactRef | MemoryEntryAddress | ArtifactAddress
+
+
+@dataclass(frozen=True)
+class PreparedFragment:
+    """One literal slice of a Memory entry selected for the current query.
+
+    ``text`` is always ``entry.text[start:end]``: the selection never rewrites, translates, or
+    summarizes evidence, so a caller can re-read the cited entry version and reconcile the
+    exact character interval.
+    """
+
+    address: MemoryEntryAddress
+    start: int
+    end: int
+    text: str
+
+
+@dataclass(frozen=True)
+class _FragmentHit:
+    """One deduplicated Memory entry the fragment selector may slice."""
+
+    address: MemoryEntryAddress
+    text: str
+    order: int
+
+
+@dataclass(frozen=True)
+class _FragmentUnit:
+    """One candidate character interval of one entry and its query relevance."""
+
+    hit: _FragmentHit
+    start: int
+    end: int
+    score: float = 0.0
 
 
 @dataclass(frozen=True)
@@ -211,6 +255,9 @@ class PreparedContextBuilder:
         profile_candidates: Sequence[PreparedProfileCandidate] = (),
         code_candidates: Sequence[PreparedCodeCandidate] = (),
     ) -> PreparedContextBuild:
+        if request.evidence_selection:
+            return self._build_fragment_context(request, memory_candidates)
+
         if request.include_code:
 
             def historical(history_request: PrepareContextRequest, entries: int) -> PreparedContextBuild:
@@ -312,6 +359,10 @@ class PreparedContextBuilder:
         probe's counters always describe the selection the build would actually perform.
         """
 
+        if request.evidence_selection:
+            content, origins, _ = self._select_fragments(request, memory_candidates)
+            return content, origins, PreparedContextOmissions()
+
         if request.assembly is not None:
             return self._select_text(
                 request,
@@ -346,6 +397,65 @@ class PreparedContextBuilder:
         if not entries:
             return None, (), omissions
         return _render(entries), tuple(entry.origin for entry in entries), omissions
+
+    def _build_fragment_context(
+        self,
+        request: PrepareContextRequest,
+        memory_candidates: Sequence[PreparedMemoryCandidates],
+    ) -> PreparedContextBuild:
+        if sum(len(candidates.hits) for candidates in memory_candidates) > self.memory_candidate_limit:
+            raise PreparedContextInvariantError("memory-candidate-limit")
+        content, origins, fragments = self._select_fragments(request, memory_candidates)
+        if content is None:
+            return PreparedContextBuild(context=self.empty(), origins=())
+        return PreparedContextBuild(
+            context=PreparedContext(status="ready", content=content, content_bytes=len(content.encode("utf-8"))),
+            origins=origins,
+            fragments=fragments,
+        )
+
+    def _select_fragments(
+        self,
+        request: PrepareContextRequest,
+        memory_candidates: Sequence[PreparedMemoryCandidates],
+    ) -> tuple[str | None, tuple[PreparedContextOrigin, ...], tuple[PreparedFragment, ...]]:
+        """Pick the literal Memory slices that answer ``request.query`` inside the byte budget.
+
+        Candidate entries are split into sentence-sized units, ranked by an IDF-weighted lexical
+        overlap with the query, and packed greedily until the rendered envelope would exceed
+        ``max_bytes``. Adjacent selected units of one entry collapse into a single fragment so the
+        per-item citation cost is paid once, which leaves more of the budget for evidence text.
+        Every delivered interval is exactly ``entry.text[start:end]``.
+        """
+
+        hits = _fragment_hits(memory_candidates)
+        if not hits:
+            return None, (), ()
+        units = tuple(unit for hit in hits for unit in _fragment_units(hit))
+        ranked = sorted(
+            _score_fragment_units(request.query, units),
+            key=lambda unit: (-unit.score, unit.hit.order, unit.start),
+        )
+        chosen: list[_FragmentUnit] = []
+        if ranked and ranked[0].score > 0:
+            for unit in ranked:
+                if unit.score <= 0:
+                    continue
+                if _fragment_units_fit((*chosen, unit), request.max_bytes):
+                    chosen.append(unit)
+            chosen.extend(_neighbour_units(chosen, units, request.max_bytes))
+        else:
+            for hit in hits:
+                first = next(unit for unit in units if unit.hit.order == hit.order)
+                if _fragment_units_fit((*chosen, first), request.max_bytes):
+                    chosen.append(first)
+        if not chosen:
+            return None, (), ()
+        fragments = _merge_fragment_units(chosen)
+        content = _render_fragment_items(fragments)
+        if len(content.encode("utf-8")) > request.max_bytes:
+            raise PreparedContextInvariantError("output-budget")
+        return content, tuple(fragment.address for fragment in fragments), fragments
 
     def _select_text(
         self,
@@ -728,3 +838,258 @@ def _truncate_utf8(text: str, byte_budget: int) -> str:
     prefix_budget = byte_budget - len(_ELLIPSIS.encode("utf-8"))
     encoded_prefix = text.encode("utf-8")[:prefix_budget]
     return f"{encoded_prefix.decode('utf-8', errors='ignore')}{_ELLIPSIS}"
+
+
+def _fragment_hits(memory_candidates: Sequence[PreparedMemoryCandidates]) -> tuple[_FragmentHit, ...]:
+    """Deduplicate the candidate hits that may contribute fragments.
+
+    Identity is the exact entry version inside one scope, so equal text in two scopes never
+    collapses into one fragment and never borrows another scope's address.
+    """
+
+    hits: list[_FragmentHit] = []
+    seen: set[tuple[str, str, str, int, str, str]] = set()
+    for candidates in memory_candidates:
+        if candidates.hits and candidates.memory_ref is None:
+            raise PreparedContextInvariantError("memory-ref-missing")
+        for hit in candidates.hits:
+            if hit.memory_ref != candidates.memory_ref:
+                raise PreparedContextInvariantError("memory-ref-mismatch")
+            identity = (
+                candidates.scope_id,
+                hit.memory_ref.family,
+                hit.memory_ref.artifact_id,
+                hit.memory_ref.revision,
+                hit.entry_id,
+                hit.entry_version_id,
+            )
+            if identity in seen:
+                continue
+            seen.add(identity)
+            if not hit.entry_id.strip() or not hit.entry_version_id.strip() or not hit.text.strip():
+                continue
+            hits.append(
+                _FragmentHit(
+                    address=MemoryEntryAddress(
+                        memory=ArtifactAddress(scope_id=candidates.scope_id, artifact=hit.memory_ref),
+                        entry_id=hit.entry_id,
+                        entry_version_id=hit.entry_version_id,
+                    ),
+                    text=hit.text,
+                    order=len(hits),
+                )
+            )
+    return tuple(hits)
+
+
+def _fragment_units(hit: _FragmentHit) -> tuple[_FragmentUnit, ...]:
+    return tuple(_FragmentUnit(hit=hit, start=start, end=end) for start, end in _sentence_spans(hit.text))
+
+
+def _sentence_spans(text: str) -> tuple[tuple[int, int], ...]:
+    """Split text into non-overlapping, whitespace-trimmed sentence spans.
+
+    Spans longer than ``_MAX_UNIT_CHARS`` are chunked at whitespace so one oversized sentence
+    cannot monopolize a small byte budget; selected neighbours are merged back together before
+    delivery, so chunking never changes the delivered characters.
+    """
+
+    spans: list[tuple[int, int]] = []
+    start = 0
+    index = 0
+    length = len(text)
+    while index < length:
+        character = text[index]
+        if character in _SENTENCE_TERMINATORS:
+            boundary = index + 1
+            while boundary < length and text[boundary] in _SENTENCE_CLOSERS:
+                boundary += 1
+            if boundary == length or text[boundary].isspace():
+                spans.append((start, boundary))
+                start = boundary
+                index = boundary
+                continue
+        elif character == "\n":
+            spans.append((start, index))
+            start = index + 1
+        index += 1
+    if start < length:
+        spans.append((start, length))
+    return _trim_spans(text, spans)
+
+
+def _trim_spans(text: str, spans: Sequence[tuple[int, int]]) -> tuple[tuple[int, int], ...]:
+    trimmed: list[tuple[int, int]] = []
+    for span_start, span_end in spans:
+        while span_start < span_end and text[span_start].isspace():
+            span_start += 1
+        while span_end > span_start and text[span_end - 1].isspace():
+            span_end -= 1
+        if span_end > span_start:
+            trimmed.extend(_split_long_span(text, span_start, span_end))
+    return tuple(trimmed)
+
+
+def _split_long_span(text: str, start: int, end: int) -> tuple[tuple[int, int], ...]:
+    if end - start <= _MAX_UNIT_CHARS:
+        return ((start, end),)
+    spans: list[tuple[int, int]] = []
+    while end - start > _MAX_UNIT_CHARS:
+        boundary = min(start + _UNIT_TARGET_CHARS, end)
+        while boundary > start:
+            if text[boundary - 1].isspace() or (boundary < end and text[boundary].isspace()):
+                break
+            boundary -= 1
+        if boundary <= start:
+            boundary = min(start + _UNIT_TARGET_CHARS, end)
+        spans.append((start, boundary))
+        start = boundary
+        while start < end and text[start].isspace():
+            start += 1
+    if end > start:
+        spans.append((start, end))
+    return tuple(spans)
+
+
+def _stem(token: str) -> str:
+    """Fold the light English morphology that separates claims from article wording."""
+
+    if len(token) > 4 and token.endswith("ies"):
+        return f"{token[:-3]}y"
+    if len(token) > 5 and token.endswith("ing"):
+        token = token[:-3]
+    elif len(token) > 4 and token.endswith("ed"):
+        token = token[:-2]
+    if len(token) > 3 and token.endswith("s") and not token.endswith(("ss", "us", "is")):
+        return token[:-1]
+    return token
+
+
+def _token_stems(text: str) -> tuple[str, ...]:
+    return tuple(_stem(token) for token in _TOKEN_PATTERN.findall(text.lower()))
+
+
+def _score_fragment_units(query: str, units: Sequence[_FragmentUnit]) -> tuple[_FragmentUnit, ...]:
+    """Rank units by IDF-weighted query overlap, with coverage and adjacency bonuses.
+
+    Two structural priors break ties the text cannot: the opening sentence of an entry is often
+    a heading or title label rather than evidence, so it is down-weighted, and later sentences
+    are slightly favoured because a document usually states its finding after its setup.
+    """
+
+    query_stems = _token_stems(query)
+    query_terms = tuple(dict.fromkeys(query_stems))
+    if not query_terms or not units:
+        return tuple(units)
+    unit_tokens = [_token_stems(unit.hit.text[unit.start : unit.end]) for unit in units]
+    document_frequency = dict.fromkeys(query_terms, 0)
+    for tokens in unit_tokens:
+        present = set(tokens)
+        for term in query_terms:
+            if term in present:
+                document_frequency[term] += 1
+    total = len(units)
+    weights = {
+        term: math.log(1 + (total - frequency + 0.5) / (frequency + 0.5))
+        for term, frequency in document_frequency.items()
+    }
+    average_length = sum(len(tokens) for tokens in unit_tokens) / total
+    query_pairs = set(pairwise(query_stems))
+    first_starts: dict[int, int] = {}
+    for unit in units:
+        first_starts[unit.hit.order] = min(first_starts.get(unit.hit.order, unit.start), unit.start)
+    scored: list[_FragmentUnit] = []
+    for unit, tokens in zip(units, unit_tokens, strict=True):
+        counts = Counter(tokens)
+        present = set(tokens)
+        matched = [term for term in query_terms if term in present]
+        if not matched:
+            scored.append(unit)
+            continue
+        length_factor = 1.2 * (0.25 + 0.75 * len(tokens) / average_length)
+        raw = sum(weights[term] * (counts[term] * 2.2) / (counts[term] + length_factor) for term in matched)
+        coverage = len(matched) / len(query_terms)
+        pairs = sum(1 for pair in query_pairs if pair in set(pairwise(tokens)))
+        rank_prior = 1 + 0.15 / (1 + unit.hit.order)
+        position_prior = 1 + 0.3 * unit.start / len(unit.hit.text)
+        heading_prior = 0.25 if unit.start == first_starts[unit.hit.order] else 1.0
+        score = (raw * (0.5 + 0.5 * coverage) + 0.5 * pairs) * rank_prior * position_prior * heading_prior
+        scored.append(replace(unit, score=score))
+    return tuple(scored)
+
+
+def _neighbour_units(
+    chosen: Sequence[_FragmentUnit],
+    units: Sequence[_FragmentUnit],
+    max_bytes: int,
+) -> tuple[_FragmentUnit, ...]:
+    """Offer the sentence before and after each selected unit while budget allows."""
+
+    grouped: dict[int, list[_FragmentUnit]] = {}
+    for unit in units:
+        grouped.setdefault(unit.hit.order, []).append(unit)
+    selected = {(unit.hit.order, unit.start) for unit in chosen}
+    additions: list[_FragmentUnit] = []
+    for unit in chosen:
+        siblings = grouped[unit.hit.order]
+        index = next(position for position, sibling in enumerate(siblings) if sibling.start == unit.start)
+        for neighbour_index in (index - 1, index + 1):
+            if not 0 <= neighbour_index < len(siblings):
+                continue
+            neighbour = siblings[neighbour_index]
+            key = (neighbour.hit.order, neighbour.start)
+            if key in selected:
+                continue
+            if _fragment_units_fit((*chosen, *additions, neighbour), max_bytes):
+                additions.append(neighbour)
+                selected.add(key)
+    return tuple(additions)
+
+
+def _merge_fragment_units(units: Sequence[_FragmentUnit]) -> tuple[PreparedFragment, ...]:
+    """Collapse selected units into exact, document-ordered literal fragments."""
+
+    grouped: dict[int, tuple[_FragmentHit, list[tuple[int, int]]]] = {}
+    for unit in units:
+        entry = grouped.setdefault(unit.hit.order, (unit.hit, []))
+        entry[1].append((unit.start, unit.end))
+    fragments: list[PreparedFragment] = []
+    for order in sorted(grouped):
+        hit, spans = grouped[order]
+        merged: list[tuple[int, int]] = []
+        for start, end in sorted(spans):
+            if merged and start - merged[-1][1] <= _MAX_MERGE_GAP_CHARS and not hit.text[merged[-1][1] : start].strip():
+                merged[-1] = (merged[-1][0], end)
+            else:
+                merged.append((start, end))
+        fragments.extend(
+            PreparedFragment(address=hit.address, start=start, end=end, text=hit.text[start:end])
+            for start, end in merged
+        )
+    return tuple(fragments)
+
+
+def _fragment_units_fit(units: Sequence[_FragmentUnit], max_bytes: int) -> bool:
+    return len(_render_fragment_items(_merge_fragment_units(units)).encode("utf-8")) <= max_bytes
+
+
+def _render_fragment_items(fragments: Sequence[PreparedFragment]) -> str:
+    envelope = {
+        "trust": "untrusted_history",
+        "items": [
+            {
+                "citation": {
+                    "scope_id": fragment.address.memory.scope_id,
+                    "memory_ref": fragment.address.memory.artifact.model_dump(mode="json"),
+                    "entry_id": fragment.address.entry_id,
+                    "entry_version_id": fragment.address.entry_version_id,
+                },
+                "content": fragment.text,
+                "start": fragment.start,
+                "end": fragment.end,
+            }
+            for fragment in fragments
+        ],
+    }
+    encoded = json.dumps(envelope, ensure_ascii=False, separators=(",", ":"))
+    return "\n\n".join((TRUST_POLICY, f"{_BEGIN_MARKER}\n{encoded}\n{_END_MARKER}"))
