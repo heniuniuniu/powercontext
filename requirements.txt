@@ -1,0 +1,3 @@
+# 全仓主流程零第三方依赖（Python 3.9+ 标准库即可）。
+# 评测器若执行 `pip install -r requirements.txt` 会正常成功且不安装任何包。
+# 各赛题可选依赖说明见 qoder/requirements.txt 与 dify/、minimax/ 各自文档。

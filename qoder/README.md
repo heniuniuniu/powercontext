@@ -26,25 +26,41 @@
 | seekdb | 资料存储与混合检索（向量 + 全文 + 结构化标签） |
 | PowerContext | 保存并复用用户偏好、任务进展与历史互动 |
 
-## 运行（零依赖，一条命令）
+## 运行（零依赖，两种模式都完整可运行）
+
+只需 Python 3.9+ 标准库，**不需要 pip install、不需要数据库、不需要 API Key**。
+`requirements.txt` 中列出的第三方包是「接入真实外部服务」时的可选项，
+不装也能跑通下面两种模式的全部主流程。
 
 ```bash
 cd qoder
-python main.py               # 默认：跑完整自检并退出，打印 SELFCHECK PASS，退出码 0
-python main.py --serve       # 人工体验：持续运行服务，浏览器打开 http://127.0.0.1:8899/
+python main.py               # 模式 A：完整自检，打印 SELFCHECK PASS，退出码 0，数秒内结束
+python main.py --serve       # 模式 B：启动站点 + API 服务并持续运行，访问 http://127.0.0.1:8899/
 ```
 
-**自动化评测请直接执行 `python main.py`**：它会在数秒内完成
-health → init → 混合检索 → 记忆复用 → 周报草稿全流程并返回确定退出码，
-不会常驻阻塞评测器。`--serve` 仅供人工在浏览器里体验。
+| 模式 | 命令 | 行为 | 适用 |
+| --- | --- | --- | --- |
+| A 自检 | `python main.py` | 跑完 health → init → 混合检索 → 记忆复用 → 周报草稿，打印 `SELFCHECK PASS` 后退出 | 自动化评测 / CI |
+| B 服务 | `python main.py --serve` | 常驻，单端口同时提供项目网站与 `/health`、`/init`、`/search`、`/memory/read`、`/memory/write` | 人工浏览器体验 |
 
-`main.py` 等价于 `python server/search.py`，只需 Python 3.9+ 标准库，
-**不需要 pip install、不需要数据库、不需要 API Key、不需要另开终端起静态服务器**：
-同一个端口既提供项目网站，也提供 `/health`、`/init`、`/search`、
-`/memory/read`、`/memory/write` 接口。未配置外部服务时，自动使用内置
-5 条示例语料 + 本地 `memory.json`，导入 → 混合检索 → 记忆复用 → 周报草稿
-全流程可完整跑通，并在 `logs/run.log` 留下
+**两种模式跑的是同一套主流程代码**（`server/search.py`），不是两套实现。
+模式 A 与以下命令完全等价，在任意工作目录下执行均可：
+
+```bash
+python qoder/main.py
+python qoder/main.py --selfcheck
+python qoder/app.py
+python qoder/server/search.py
+python run.py                     # 仓库根目录转发入口
+```
+
+模式 B 启动后，打开 `http://127.0.0.1:8899/` 即可在检索框体验混合检索；
+未配置外部服务时自动使用内置 5 条示例语料 + 本地 `memory.json`，
+导入 → 混合检索 → 记忆复用 → 周报草稿全流程完整可跑，
+并在 `qoder/logs/run.log` 留下
 `seekdb.hybrid_search` 与 `powercontext.write` 两条证据。
+仓库 `qoder/site/index.html` 与 `docs/index.html` 还预渲染了一份主流程真实输出，
+即使不执行脚本、只读取静态页面，也能核对命中结果与 PowerContext 记忆卡片。
 
 ### 接入真实 seekdb / PowerContext（可选增强）
 
