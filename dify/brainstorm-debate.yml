@@ -1,6 +1,6 @@
 app:
   description: Dify Workflow 应用。输入一个日常离谱辩题，AI 主持人结合 PowerContext 里记住的往期梗和人物设定串场，并把本轮新梗写回 PowerContext 记忆，下次接着聊。记忆的持久化检索由 PowerContext 提供，部署时也可改用 seekdb 作为 Dify 的应用数据库。
-  icon: "\U0001F3A4"
+  icon: "🎤"
   icon_background: '#FFEAD5'
   mode: workflow
   name: 办公室离谱辩论会
@@ -9,10 +9,7 @@ kind: app
 version: 0.1.5
 workflow:
   conversation_variables: []
-  environment_variables:
-    - name: PC_BRIDGE_URL
-      type: string
-      value: http://host.docker.internal:8765
+  environment_variables: []
   features:
     file_upload:
       enabled: false
@@ -115,7 +112,7 @@ workflow:
           timeout: {max_connect_timeout: 0, max_read_timeout: 0, max_write_timeout: 0}
           title: 读取往期记忆
           type: http-request
-          url: '{{#env.PC_BRIDGE_URL#}}/memory/read'
+          url: 'http://127.0.0.1:8765/memory/read'
           variables: []
         height: 92
         id: read_memory
@@ -132,7 +129,7 @@ workflow:
             completion_params: {temperature: 0.85, max_tokens: 700}
             mode: chat
             name: gpt-4o-mini
-            provider: langgenius/openai/openai
+            provider: openai
           prompt_template:
             - id: sys-1
               role: system
@@ -178,7 +175,7 @@ workflow:
           timeout: {max_connect_timeout: 0, max_read_timeout: 0, max_write_timeout: 0}
           title: 写回记忆
           type: http-request
-          url: '{{#env.PC_BRIDGE_URL#}}/memory/write'
+          url: 'http://127.0.0.1:8765/memory/write'
           variables: []
         height: 92
         id: write_memory
