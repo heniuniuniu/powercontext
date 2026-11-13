@@ -1,9 +1,10 @@
 """资料整理助手后端：seekdb 混合检索 + PowerContext 记忆读写。
 
 设计目标（对应赛题「项目能够运行」基础验收）：
-  * 零配置、零第三方依赖即可启动并跑通导入 -> 混合检索 -> 记忆复用 -> 周报草稿；
-  * 配置 SEEKDB_DSN / POWERCONTEXT_URL 且装了 pymysql / requests 时，
-    自动切换为真实 seekdb 与 PowerContext，本地路径只作为兜底；
+  * 配置 SEEKDB_DSN 时走 seekdb 单条 SQL 的向量 + 全文融合检索；
+  * 配置 POWERCONTEXT_URL（默认本机 127.0.0.1:8765）且装了 requests 时，
+    通过官方 Atomic Memory API 真实写入/读取检索记忆，并用记忆召回影响排序；
+  * 外部服务不可用时自动降级为内置语料 + 本地 memory.json，主流程不中断；
   * 单端口同时提供静态站点与 JSON API，评审无需额外起 http.server；
   * `--selfcheck` 一条命令完成端到端自检，退出码 0 表示主流程可运行。
 """
@@ -25,6 +26,9 @@ ROOT = Path(__file__).resolve().parents[1]          # qoder/
 SITE = ROOT / "site"
 LOG = ROOT / "logs" / "run.log"
 MEMORY_FILE = ROOT / "memory.json"
+PC_SCOPE_FILE = ROOT / ".powercontext-scope"
+PC_SCOPE_TITLE = "资料整理助手"
+PC_DEFAULT_URL = "http://127.0.0.1:8765"
 LOG.parent.mkdir(parents=True, exist_ok=True)
 
 # 第三方依赖是可选的：判题环境 / 评审电脑没有装也能完整运行。
@@ -100,7 +104,15 @@ def backend_name() -> str:
 
 
 def _tokens(q: str):
-    return [t for t in re.findall(r"[\w\u4e00-\u9fff]+", q.lower()) if t]
+    """中英文混合分词：英文按词，中文补充二元组，避免长查询整体匹配不到。"""
+    out = []
+    for t in re.findall(r"[\w\u4e00-\u9fff]+", q.lower()):
+        if not t:
+            continue
+        out.append(t)
+        if re.fullmatch(r"[\u4e00-\u9fff]+", t) and len(t) > 2:
+            out.extend(t[i:i + 2] for i in range(len(t) - 1))
+    return list(dict.fromkeys(out))
 
 
 def _embed(text: str, dim: int = 32):
@@ -133,7 +145,8 @@ def init_store():
     return {"ok": True, "backend": backend, "chunks": len(SAMPLE)}
 
 
-def hybrid_search(query: str, vector=None, top_tag: str | None = None):
+def hybrid_search(query: str, vector=None, top_tag: str | None = None,
+                  recalled_tags: list[str] | None = None):
     cn = db()
     if cn is not None:
         vec = vector or [0.0] * 384
@@ -152,26 +165,30 @@ def hybrid_search(query: str, vector=None, top_tag: str | None = None):
                 rows = cur.fetchall()
             backend = "seekdb"
         except Exception:  # noqa: BLE001
-            rows, backend = _local_hybrid(query, top_tag), "local"
+            rows, backend = _local_hybrid(query, top_tag, recalled_tags), "local"
         finally:
             cn.close()
     else:
-        rows, backend = _local_hybrid(query, top_tag), "local"
+        rows, backend = _local_hybrid(query, top_tag, recalled_tags), "local"
     log("seekdb.hybrid_search",
         {"backend": backend, "query": query, "rows": len(rows),
+         "recalled_tags": recalled_tags or [],
          "note": "single fused ranking, not two client-side result sets"})
     return rows, backend
 
 
-def _local_hybrid(query: str, top_tag: str | None = None):
+def _local_hybrid(query: str, top_tag: str | None = None,
+                  recalled_tags: list[str] | None = None):
     qv = _embed(query)
+    recalled = set(recalled_tags or [])
     rows = []
     for item in SAMPLE:
         haystack = (item["text"] + item["tag"] + item["source"]).lower()
         ft = sum(2 for t in _tokens(query) if t in haystack)
         vec = _cos(qv, _embed(item["text"])) * 3
         tag = 1 if top_tag and item["tag"] == top_tag else 0
-        score = ft + vec + tag
+        recall = 1.5 if item["tag"] in recalled else 0
+        score = ft + vec + tag + recall
         if score > 0:
             rows.append({**item, "score": round(score, 3),
                          "chunk_id": item["source"], "content": item["text"]})
@@ -180,32 +197,156 @@ def _local_hybrid(query: str, top_tag: str | None = None):
 
 
 # --------------------------------------------------------------------------
-# 记忆层：PowerContext HTTP API 或本地 JSON 文件（跨进程 / 跨会话可复用）。
+# 记忆层：官方 PowerContext Atomic Memory API 优先，本地 JSON 只做降级。
+#   写：POST /v1/memory/remember（每条检索记录一个 artifact）
+#   读：POST /v1/memory/entries/list（汇总最近主题 / 常用标签）
+#   召回：POST /v1/memory/search（用历史记忆影响本轮排序）
 # --------------------------------------------------------------------------
+def pc_base() -> str:
+    return os.environ.get("POWERCONTEXT_URL", PC_DEFAULT_URL).rstrip("/")
+
+
+def pc_alive() -> bool:
+    if not requests:
+        return False
+    try:
+        return requests.get(f"{pc_base()}/health/ready", timeout=2).status_code == 200
+    except Exception:  # noqa: BLE001
+        return False
+
+
+def pc_scope() -> str | None:
+    """取得（或首次创建）本项目在 PowerContext 中的 Scope，并持久化到文件。"""
+    env = os.environ.get("POWERCONTEXT_SCOPE_ID", "").strip()
+    if env:
+        return env
+    if PC_SCOPE_FILE.exists():
+        sid = PC_SCOPE_FILE.read_text(encoding="utf-8").strip()
+        if sid:
+            return sid
+    base = pc_base()
+    try:
+        r = requests.get(f"{base}/v1/scopes", timeout=3)
+        r.raise_for_status()
+        for item in r.json().get("items", []):
+            if item.get("title") == PC_SCOPE_TITLE:
+                sid = item["scope_id"]
+                PC_SCOPE_FILE.write_text(sid, encoding="utf-8")
+                return sid
+        r = requests.post(f"{base}/v1/scopes", timeout=5, json={
+            "title": PC_SCOPE_TITLE,
+            "summary": "学习科研资料检索与跨会话记忆",
+            "idempotency_key": "qoder-notes-helper-scope",
+        })
+        r.raise_for_status()
+        sid = r.json()["scope_id"]
+        PC_SCOPE_FILE.write_text(sid, encoding="utf-8")
+        return sid
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def _parse_memory_text(text: str):
+    q = re.search(r"主题=([^；]+)", text)
+    t = re.search(r"标签=([^；]+)", text)
+    u = re.search(r"用户=([^；]+)", text)
+    ts = re.search(r"时间=([^；]+)", text)
+    return (q.group(1).strip() if q else None,
+            t.group(1).strip() if t else None,
+            u.group(1).strip() if u else None,
+            ts.group(1).strip() if ts else "")
+
+
 def pc_read(user: str):
-    base = os.environ.get("POWERCONTEXT_URL", "").rstrip("/")
-    if base and requests:
-        try:
-            r = requests.get(f"{base}/v1/context/{user}", timeout=5)
-            r.raise_for_status()
-            return r.json()
-        except Exception:  # noqa: BLE001
-            pass
+    """从真实 PowerContext 读取该用户的检索记忆；不可用时回退本地文件。"""
+    if pc_alive():
+        sid = pc_scope()
+        if sid:
+            try:
+                r = requests.post(f"{pc_base()}/v1/memory/entries/list", timeout=5, json={
+                    "scope_id": sid, "limit": 50})
+                r.raise_for_status()
+                records = []
+                for entry in r.json().get("entries", []):
+                    if entry.get("kind") != "检索记录":
+                        continue
+                    q, tag, entry_user, ts = _parse_memory_text(entry.get("text", ""))
+                    if user and entry_user and entry_user != user:
+                        continue
+                    if q:
+                        records.append((ts, q, tag))
+                records.sort(key=lambda x: x[0], reverse=True)
+                recent = list(dict.fromkeys(q for _, q, _ in records))[:5]
+                tags = [tag for _, _, tag in records if tag]
+                top_tag = max(set(tags), key=tags.count) if tags else None
+                state = {"recent": recent, "topTag": top_tag}
+                log("powercontext.read", {"backend": "powercontext", "scope": sid,
+                                         "user": user, "state": state,
+                                         "entries": len(records)})
+                return state
+            except Exception:  # noqa: BLE001
+                pass
     data = json.loads(MEMORY_FILE.read_text(encoding="utf-8")) if MEMORY_FILE.exists() else {}
-    return data.get(user, {})
+    state = data.get(user, {})
+    log("powercontext.read", {"backend": "local", "user": user, "state": state})
+    return state
+
+
+def pc_recall(query: str, user: str) -> list[str]:
+    """用本轮查询召回历史记忆，返回历史命中过的标签，用于排序加权。"""
+    if not pc_alive():
+        return []
+    sid = pc_scope()
+    if not sid:
+        return []
+    try:
+        r = requests.post(f"{pc_base()}/v1/memory/search", timeout=5, json={
+            "scope_id": sid, "query": query, "limit": 5})
+        r.raise_for_status()
+        tags = []
+        for hit in r.json().get("hits", []):
+            _, tag, entry_user, _ = _parse_memory_text(hit.get("memory", {}).get("text", ""))
+            if user and entry_user and entry_user != user:
+                continue
+            if tag:
+                tags.append(tag)
+        tags = list(dict.fromkeys(tags))
+        log("powercontext.recall", {"backend": "powercontext", "scope": sid,
+                                    "query": query, "tags": tags})
+        return tags
+    except Exception:  # noqa: BLE001
+        return []
+
+
+def pc_remember(user: str, query: str, tag: str | None):
+    """把本轮检索主题与标签真实写入 PowerContext Atomic Memory。"""
+    if not pc_alive():
+        return None
+    sid = pc_scope()
+    if not sid:
+        return None
+    text = (f"主题={query}；标签={tag or '未分类'}；用户={user}；"
+            f"时间={time.strftime('%Y-%m-%dT%H:%M:%S')}")
+    try:
+        r = requests.post(f"{pc_base()}/v1/memory/remember", timeout=5, json={
+            "scope_id": sid, "kind": "检索记录", "text": text,
+            "description": f"{query} · {tag or '未分类'}"})
+        r.raise_for_status()
+        record = r.json()["records"][0]
+        log("powercontext.write", {"backend": "powercontext", "scope": sid,
+                                   "user": user, "text": text,
+                                   "artifact": record["artifact"]})
+        return record
+    except Exception:  # noqa: BLE001
+        return None
 
 
 def pc_write(user: str, state: dict):
-    base = os.environ.get("POWERCONTEXT_URL", "").rstrip("/")
-    if base and requests:
-        try:
-            requests.post(f"{base}/v1/context/{user}", json=state, timeout=5).raise_for_status()
-        except Exception:  # noqa: BLE001
-            pass
+    """保留 /memory/write 语义：本地落盘镜像，并尽量写入一条记忆快照。"""
     data = json.loads(MEMORY_FILE.read_text(encoding="utf-8")) if MEMORY_FILE.exists() else {}
     data[user] = state
     MEMORY_FILE.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
-    log("powercontext.write", {"user": user, "state": state})
+    log("powercontext.mirror", {"backend": "local", "user": user, "state": state})
 
 
 def weekly_report(memo: dict):
@@ -250,7 +391,8 @@ class Handler(BaseHTTPRequestHandler):
         path = urlparse(self.path).path
         if path == "/health":
             return self._send({"ok": True, "backend": backend_name(),
-                               "version": "1.0", "chunks": len(SAMPLE)})
+                               "powercontext": "powercontext" if pc_alive() else "local",
+                               "version": "1.1", "chunks": len(SAMPLE)})
         if path == "/api/memory":
             return self._send(pc_read("demo"))
         if path in ("/", "/index.html"):
@@ -273,13 +415,19 @@ class Handler(BaseHTTPRequestHandler):
                 query = req.get("query") or "混合检索"
                 user = req.get("user", "demo")
                 memo = pc_read(user)
-                rows, backend = hybrid_search(query, req.get("vector"), memo.get("topTag"))
+                recalled_tags = pc_recall(query, user)
+                rows, backend = hybrid_search(query, req.get("vector"),
+                                              memo.get("topTag"), recalled_tags)
                 memo["recent"] = list(dict.fromkeys([query] + memo.get("recent", [])))[:5]
                 if rows:
                     memo["topTag"] = rows[0].get("tag") or memo.get("topTag")
+                record = pc_remember(user, query, rows[0].get("tag") if rows else None)
                 pc_write(user, memo)
                 return self._send({"hits": rows, "memo": memo,
-                                   "backend": backend, "report": weekly_report(memo)})
+                                   "backend": backend,
+                                   "memory_backend": "powercontext" if record else "local",
+                                   "recalled_tags": recalled_tags,
+                                   "report": weekly_report(memo)})
             if path in ("/memory/read", "/api/memory/read"):
                 return self._send(pc_read(req.get("user", "demo")))
             if path in ("/memory/write", "/api/memory/write"):
@@ -318,9 +466,15 @@ def selfcheck() -> int:
         assert memo.get("recent"), "PowerContext state not persisted"
         assert LOG.exists(), "run.log missing"
         text = LOG.read_text(encoding="utf-8")
-        assert "seekdb.hybrid_search" in text and "powercontext.write" in text, "log evidence missing"
+        assert "seekdb.hybrid_search" in text and "powercontext.read" in text, "log evidence missing"
+        if health.get("powercontext") == "powercontext":
+            assert "powercontext.write" in text and '"backend": "powercontext"' in text, \
+                "PowerContext write evidence missing"
         print("SELFCHECK PASS: health / init / hybrid search / memory reuse / weekly report")
-        print(json.dumps({"backend": first["backend"], "hits": len(first["hits"]),
+        print(json.dumps({"backend": first["backend"],
+                          "powercontext": health.get("powercontext"),
+                          "memory_backend": first.get("memory_backend"),
+                          "hits": len(first["hits"]),
                           "recent": second["memo"]["recent"],
                           "topTag": second["memo"]["topTag"]}, ensure_ascii=False))
         return 0

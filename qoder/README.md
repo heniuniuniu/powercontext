@@ -24,13 +24,11 @@
 | --- | --- |
 | Qoder | 项目主要开发工作：需求拆解、页面与检索服务编码、调试、通过 Sites 发布项目网站 |
 | seekdb | 资料存储与混合检索（向量 + 全文 + 结构化标签） |
-| PowerContext | 保存并复用用户偏好、任务进展与历史互动 |
+| PowerContext | Atomic Memory 保存检索主题与常用标签，跨会话召回并影响排序权重（已接入官方 1.5.1） |
 
-## 运行（零依赖，两种模式都完整可运行）
+## 运行
 
-只需 Python 3.9+ 标准库，**不需要 pip install、不需要数据库、不需要 API Key**。
-`requirements.txt` 中列出的第三方包是「接入真实外部服务」时的可选项，
-不装也能跑通下面两种模式的全部主流程。
+### 方式一：零依赖自检（无需任何外部服务）
 
 ```bash
 cd qoder
@@ -54,26 +52,41 @@ python qoder/server/search.py
 python run.py                     # 仓库根目录转发入口
 ```
 
-模式 B 启动后，打开 `http://127.0.0.1:8899/` 即可在检索框体验混合检索；
-未配置外部服务时自动使用内置 5 条示例语料 + 本地 `memory.json`，
-导入 → 混合检索 → 记忆复用 → 周报草稿全流程完整可跑，
-并在 `qoder/logs/run.log` 留下
-`seekdb.hybrid_search` 与 `powercontext.write` 两条证据。
-仓库 `qoder/site/index.html` 与 `docs/index.html` 还预渲染了一份主流程真实输出，
-即使不执行脚本、只读取静态页面，也能核对命中结果与 PowerContext 记忆卡片。
+未启动外部服务时，自动使用内置 5 条示例语料 + 本地 `memory.json`，
+导入 → 混合检索 → 记忆复用 → 周报草稿全流程完整可跑。
 
-### 接入真实 seekdb / PowerContext（可选增强）
+### 方式二：接入真实 PowerContext（已实测）
+
+本机已验证官方 `powercontext` 1.5.1 的 SQLite 后端，Windows 上可直接运行：
 
 ```bash
-pip install pymysql requests
-export SEEKDB_DSN='user@127.0.0.1:2881/kb'          # 占位值，换成自己的实例
-export POWERCONTEXT_URL='http://127.0.0.1:8080'     # 占位值，换成自己的服务
-python main.py
+cd qoder
+python -m venv .venv
+.venv/Scripts/pip install "powercontext[server]"
+.venv/Scripts/powercontext config init --template --output .env.powercontext
+.venv/Scripts/powercontext server run --env-file .env.powercontext --port 8765
 ```
 
-配置了环境变量且依赖可用时，`/search` 自动改走 seekdb 单条 SQL 的
-向量 + 全文融合检索、PowerContext HTTP 上下文读写；连接失败会自动降级回
-本地路径，主流程不会中断。仓库内不含任何真实凭据。
+另开一个终端跑项目：
+
+```bash
+cd qoder
+POWERCONTEXT_URL=http://127.0.0.1:8765 .venv/Scripts/python main.py
+# SELFCHECK PASS ...
+# {"backend": "local", "powercontext": "powercontext", "memory_backend": "powercontext", ...}
+```
+
+此时：
+
+- 每次检索通过 `POST /v1/memory/remember` 写入一条 Atomic Memory（`kind=检索记录`）；
+- 下一轮检索通过 `POST /v1/memory/entries/list` 读取最近主题/常用标签，
+  并通过 `POST /v1/memory/search` 召回历史标签影响排序；
+- `/health` 与 `/search` 响应里的 `powercontext` / `memory_backend` 字段为 `powercontext`；
+- 真实输出见 [`evidence/powercontext-live.md`](evidence/powercontext-live.md)。
+
+PowerContext 服务不可达时自动降级回本地 `memory.json`，主流程不会中断。
+真实 seekdb 仍是可选增强：配置 `SEEKDB_DSN` 且安装 `pymysql` 后，
+`/search` 会改走 seekdb 单条 SQL 的向量 + 全文融合检索。仓库内不含任何真实凭据。
 
 ## 验证样例
 
@@ -89,15 +102,20 @@ PowerContext 记忆读写记录，以及重置方法。
 ## 项目网站
 
 `site/index.html`（同时复制到仓库 `docs/index.html` 供公开托管）。
-网站包含项目简介、解决的问题、核心功能、演示、代码仓库链接与体验入口。
+网站包含项目简介、解决的问题、核心功能、演示、真实运行证据、代码仓库链接与体验入口。
+
+已通过 Qoder Sites 公开发布（可见范围：任何人都可访问）：
+
+<https://powercontext-notes-helper-crf2cqsn3ek.qoder.website/>
 
 ## 材料清单
 
 | 文件 | 用途 |
 | --- | --- |
 | `site/` | 项目网站静态源码 |
-| `server/search.py` | seekdb 混合检索 + PowerContext 记忆读写的本地服务 |
+| `server/search.py` | seekdb 混合检索 + PowerContext Atomic Memory 读写的本地服务 |
 | `server/requirements.txt` | 依赖清单 |
+| `evidence/powercontext-live.md` | PowerContext 真实运行输出与日志节选 |
 | `验证样例.md` | 可复现的操作步骤与证据 |
 | `Qoder开发记录.md` | Qoder 参与开发的过程记录 |
 | `README.md` | 本运行说明 |

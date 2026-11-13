@@ -70,22 +70,54 @@
       常用标签：数据库　<span style="color:#8a6d2f">该标签会在下一次检索中提升排序权重。</span>
       <br /><small>检索后端：内置示例数据（零依赖兜底，页面预渲染结果）</small></div>
     <p style="font-size:12px;color:#7b8696;margin:12px 0 0">
-      上面是主流程的真实输出（已预渲染，未执行脚本也能核对）；启动
-      <code>python main.py --serve</code> 后，同样的查询会走 seekdb 的混合检索 SQL，
-      并把本次主题写入 PowerContext。
+      静态托管时上面是内置示例数据；启动 <code>python main.py --serve</code> 后，
+      同样的查询会走本机服务，并把本次主题真实写入 PowerContext Atomic Memory。
+      配置 <code>SEEKDB_DSN</code> 时混合检索改走 seekdb 的单条 SQL。
     </p>
   </section>
 
   <section>
-    <h3>运行与自检（零依赖）</h3>
-    <pre style="background:#f7f9fc;border:1px solid #e3e8ef;border-radius:8px;padding:12px;overflow:auto">cd qoder
-python main.py
-# SELFCHECK PASS: health / init / hybrid search / memory reuse / weekly report
-# exit code 0
-python main.py --serve      # 人工体验：http://127.0.0.1:8899/</pre>
-    <p style="font-size:13px;color:#5b6675">主流程：导入资料 → 向量 + 全文混合检索 → PowerContext 记忆复用 → 周报草稿。
-      无需安装依赖、无需数据库、无需 API Key；配置 <code>SEEKDB_DSN</code> 与
-      <code>POWERCONTEXT_URL</code> 时自动切换为真实服务。</p>
+    <h3>运行与自检（两种模式）</h3>
+    <p style="font-size:13px;color:#5b6675;margin:0 0 10px">
+      方式一：零依赖自检。<code>cd qoder &amp;&amp; python main.py</code> 打印
+      <code>SELFCHECK PASS</code> 并以 0 退出；<code>python main.py --serve</code>
+      启动站点与 API（http://127.0.0.1:8899/）。未启动外部服务时使用内置语料 +
+      本地 <code>memory.json</code>。
+    </p>
+    <pre style="background:#f7f9fc;border:1px solid #e3e8ef;border-radius:8px;padding:12px;overflow:auto"># 方式二：接入官方 PowerContext 1.5.1（SQLite 后端，已实测）
+python -m venv .venv
+.venv/Scripts/pip install "powercontext[server]"
+.venv/Scripts/powercontext config init --template --output .env.powercontext
+.venv/Scripts/powercontext server run --env-file .env.powercontext --port 8765
+
+# 另开终端
+POWERCONTEXT_URL=http://127.0.0.1:8765 .venv/Scripts/python main.py
+# SELFCHECK PASS ...
+# {"powercontext": "powercontext", "memory_backend": "powercontext", ...}</pre>
+    <p style="font-size:13px;color:#5b6675">主流程：导入资料 → 向量 + 全文混合检索 →
+      PowerContext Atomic Memory 记忆复用 → 周报草稿。配置 <code>SEEKDB_DSN</code>
+      时检索改走 seekdb 单条 SQL；PowerContext 不可达时自动降级回本地记忆。</p>
+  </section>
+
+  <section>
+    <h3>真实运行证据（本机实测）</h3>
+    <p style="font-size:13px;color:#5b6675;margin:0 0 10px">
+      2026-11-13 在 Windows + Python 3.13.9 + PowerContext 1.5.1 上跑出的真实记录，
+      不是前端模拟。完整输出见仓库 <code>qoder/evidence/powercontext-live.md</code>。
+    </p>
+    <pre style="background:#f7f9fc;border:1px solid #e3e8ef;border-radius:8px;padding:12px;overflow:auto">SELFCHECK PASS: health / init / hybrid search / memory reuse / weekly report
+{"backend": "local", "powercontext": "powercontext", "memory_backend": "powercontext",
+ "hits": 5, "recent": ["混合检索", "向量索引刷新"], "topTag": "检索"}
+
+powercontext.read   {"backend":"powercontext","scope":"scp_1b80trae6qkt9bfdnq05sx1mj0","entries":6}
+powercontext.recall {"backend":"powercontext","query":"向量索引刷新","tags":["数据库"]}
+powercontext.write  {"backend":"powercontext","artifact":{"family":"atomic-memory",
+  "artifact_id":"art_2fb585d87be7443ebb94b316b33f68b0","revision":1}}</pre>
+    <p style="font-size:12px;color:#7b8696;margin:10px 0 0">
+      可复现核对：<code>POST /v1/memory/entries/list</code> 能查到
+      <code>主题=向量索引刷新；标签=数据库</code> 的条目；
+      <code>POST /v1/memory/search</code> 以「混合检索」可召回同一条记忆。
+    </p>
   </section>
 
   <section>
@@ -93,7 +125,7 @@ python main.py --serve      # 人工体验：http://127.0.0.1:8899/</pre>
     <div class="grid">
       <div class="card"><b>Qoder</b><span>需求拆解、页面与检索服务编码、调试，以及通过 Sites 发布本项目网站。</span></div>
       <div class="card"><b>seekdb</b><span>存储切片原文与向量；一次 SQL 内完成向量近邻、全文匹配与标签过滤。</span></div>
-      <div class="card"><b>PowerContext</b><span>保存最近主题、常用标签与未完成任务，跨会话复用并影响排序权重。</span></div>
+      <div class="card"><b>PowerContext</b><span>官方 1.5.1 Atomic Memory：保存检索主题与常用标签，跨会话召回并影响排序权重。</span></div>
     </div>
   </section>
 

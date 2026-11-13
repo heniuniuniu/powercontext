@@ -38,10 +38,21 @@ async function backendSearch(q) {
   }
 }
 
+function tokens(q) {
+  const out = [];
+  for (const t of q.toLowerCase().split(/\s+/).filter(Boolean)) {
+    out.push(t);
+    if (/^[\u4e00-\u9fff]+$/.test(t) && t.length > 2) {
+      for (let i = 0; i < t.length - 1; i++) out.push(t.slice(i, i + 2));
+    }
+  }
+  return [...new Set(out)];
+}
+
 function score(item, q, topTag) {
   const text = (item.text + item.tag + item.source).toLowerCase();
   let s = 0;
-  for (const w of q.toLowerCase().split(/\s+/).filter(Boolean)) if (text.includes(w)) s += 2;
+  for (const w of tokens(q)) if (text.includes(w)) s += 2;
   if (topTag && item.tag === topTag) s += 1;
   return s;
 }
@@ -59,7 +70,9 @@ async function render(q) {
   const remote = await backendSearch(q);
   let hits, memo, backend;
   if (remote && remote.hits && remote.hits.length) {
-    backend = 'seekdb / PowerContext 服务（' + (remote.backend || 'remote') + '）';
+    backend = '本机服务 · 检索 ' + (remote.backend || 'local') +
+      ' · 记忆 ' + (remote.memory_backend || 'local') +
+      (remote.recalled_tags && remote.recalled_tags.length ? ' · 召回 ' + remote.recalled_tags.join('/') : '');
     hits = remote.hits.slice(0, 5).map((h, i) => ({
       source: h.source || h.chunk_id, tag: h.tag || '资料',
       text: h.text || h.content || '', s: h.score ?? (5 - i),

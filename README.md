@@ -19,7 +19,20 @@ python qoder/main.py          # 等价写法
 python qoder/main.py --serve  # 常驻站点 + API，浏览器打开 http://127.0.0.1:8899/
 ```
 
-只需 Python 3.9+ 标准库，不需要安装依赖、不需要数据库、不需要 API Key。
+只需 Python 3.9+ 标准库即可跑通零依赖自检。需要验证**真实 PowerContext** 时：
+
+```bash
+cd qoder
+python -m venv .venv
+.venv/Scripts/pip install "powercontext[server]"
+.venv/Scripts/powercontext config init --template --output .env.powercontext
+.venv/Scripts/powercontext server run --env-file .env.powercontext --port 8765
+# 另开终端
+POWERCONTEXT_URL=http://127.0.0.1:8765 .venv/Scripts/python main.py
+```
+
+真实运行输出与日志节选见
+[`qoder/evidence/powercontext-live.md`](qoder/evidence/powercontext-live.md)。
 完整运行说明见 [`qoder/README.md`](qoder/README.md)，可复现步骤见
 [`qoder/验证样例.md`](qoder/验证样例.md)。
 

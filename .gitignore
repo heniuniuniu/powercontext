@@ -4,3 +4,6 @@ __pycache__/
 # 本地运行产物，不作为赛题交付物
 qoder/logs/
 qoder/memory.json
+.venv/
+.env.powercontext
+qoder/.powercontext-scope

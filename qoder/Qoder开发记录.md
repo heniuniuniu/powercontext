@@ -13,8 +13,9 @@
 | 页面编码 | 生成单页站点：痛点卡片、检索框、命中列表、记忆卡片、代码仓库链接，浅色主题且适配移动端 | `site/index.html`、`site/app.js` |
 | 服务编码 | 生成 seekdb 混合检索 SQL、表结构与索引 DDL、PowerContext 读写封装、带 CORS 的 HTTP 服务 | `server/search.py` |
 | 调试 | 修正后端未启动时前端直接报错的问题：改为自动回退到内置示例数据；修正标签权重在刷新后丢失的问题：写入 localStorage 并在下次检索时读取 | `site/app.js` 的 `readMemo` / `writeMemo` |
-| 验证 | 编排「导入 → 检索 → 记忆复用 → 周报」的验证步骤与重置方法 | `验证样例.md` |
-| 发布 | 通过 Sites 发布项目网站，并把可见范围设为「任何人都可访问」 | 项目网站网址（提交平台时填写 `workUrl`） |
+| 真实接入 | 用官方 `powercontext` 1.5.1（SQLite 后端）替换自定义的模拟记忆接口：检索后 `POST /v1/memory/remember` 写入 Atomic Memory，下一轮用 `entries/list` 与 `memory/search` 召回并影响排序 | `server/search.py` 的 `pc_read` / `pc_remember` / `pc_recall`；`evidence/powercontext-live.md` |
+| 验证 | 编排「导入 → 检索 → 记忆复用 → 周报」的验证步骤与重置方法；跑出真实 PowerContext 的 artifact id 与服务端记录 | `验证样例.md`、`evidence/powercontext-live.md` |
+| 发布 | 通过 Sites 发布项目网站，并把可见范围设为「任何人都可访问」 | https://powercontext-notes-helper-crf2cqsn3ek.qoder.website/ |
 
 ## 账号 UID
 
