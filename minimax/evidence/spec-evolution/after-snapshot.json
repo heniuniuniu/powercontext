@@ -1,0 +1,70 @@
+{
+  "label": "after",
+  "task": "支持无门槛优惠券（coupon.threshold = 0）：无门槛券不做门槛判定即可使用；门槛判定使用 >= 而不是 >；负门槛视为券配置错误。",
+  "exit_code": 0,
+  "spec_ids": [
+    "REQ-CPN-003",
+    "REQ-CPN-004",
+    "REQ-CPN-008",
+    "REQ-CPN-006",
+    "ADR-006",
+    "ADR-002",
+    "REQ-CPN-001",
+    "REQ-API-004",
+    "REQ-CPN-005",
+    "REQ-CPN-002",
+    "REQ-API-003",
+    "ADR-001"
+  ],
+  "retired_spec_ids": [
+    "ADR-004",
+    "ADR-003"
+  ],
+  "watched": {
+    "REQ-CPN-003": {
+      "present": true,
+      "partition": "specs",
+      "title": "门槛判定使用大于等于",
+      "status": "active",
+      "content_sha256": "3c6ce96a3fff17ec0544cd3bebccc848ab0b7cb728f5777b6cc4fd462e037bb5",
+      "source_ref": "specs/coupon-rules.md:32#REQ-CPN-003",
+      "body": "订单**商品小计大于或等于**券门槛时，券即可使用；恰好等于门槛的订单同样可以使用。\n门槛判定只针对 `threshold > 0` 的券。"
+    },
+    "REQ-CPN-004": {
+      "present": true,
+      "partition": "specs",
+      "title": "无门槛券",
+      "status": "active",
+      "content_sha256": "63905905d438c9747423de252bd1d150e01108972cca341bddb59207e1e7b28d",
+      "source_ref": "specs/coupon-rules.md:42#REQ-CPN-004",
+      "body": "券的 `threshold` 为 0 表示**无门槛券**：不做任何门槛判定，任意非空订单都可以使用；\n券的减免额仍然受 `max_discount` 封顶，且不得超过订单商品小计，运费照常隔离在优惠基数之外。\n（v1.3 修订：明确无门槛券同样受减免上限与运费隔离约束，门槛判定被跳过不代表其他规则失效。）"
+    },
+    "REQ-CPN-006": {
+      "present": true,
+      "partition": "specs",
+      "title": "运费不参与优惠计算",
+      "status": "active",
+      "content_sha256": "b172b6d4429d8d4ec280b14490fddfe19d6f056e992321af981c5e99b53600f5",
+      "source_ref": "specs/coupon-rules.md:62#REQ-CPN-006",
+      "body": "门槛判定与优惠金额计算都只使用订单**商品小计**，运费不计入优惠基数；\n无门槛券（`threshold = 0`）同样不把运费计入优惠基数。\n（v1.3 修订：补充无门槛券在运费隔离上的口径，与 ADR-002、ADR-006 保持一致。）"
+    },
+    "REQ-CPN-008": {
+      "present": true,
+      "partition": "specs",
+      "title": "负门槛属于券配置错误",
+      "status": "active",
+      "content_sha256": "7f53496662310f1920de6cab3fa5bd747e1bd776d124b3d3d2208b7ebb88bbbe",
+      "source_ref": "specs/coupon-rules.md:83#REQ-CPN-008",
+      "body": "券的 `threshold` 为负数属于**券配置错误**，`apply_coupon` 必须抛出\n`CouponNotApplicable`（与引入无门槛券之前的既有行为保持一致）。\n只有 `threshold == 0`（无门槛）与 `threshold > 0`（有门槛）两种取值是合法的。"
+    },
+    "ADR-006": {
+      "present": true,
+      "partition": "specs",
+      "title": "无门槛券同样受减免上限与运费隔离约束",
+      "status": "active",
+      "content_sha256": "ba1dabf6a947c8c825aa957373f9cf0c0fde37f55e9d18412d738d9849e6e60f",
+      "source_ref": "specs/decisions.md:62#ADR-006",
+      "body": "引入无门槛券（`threshold == 0`）之后，**门槛判定**被跳过，但**减免上限**（`max_discount`）、\n**不超过商品金额**（ADR-005）与**运费隔离**（ADR-002）对无门槛券同样成立。\n该决策澄清了 ADR-005 的适用范围：封顶规则不区分券是否设置了门槛。"
+    }
+  }
+}

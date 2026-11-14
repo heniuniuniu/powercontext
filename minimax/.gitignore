@@ -1,0 +1,10 @@
+# 运行期状态（不属于交付物，评审可自行重新生成）
+.sddctx/
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+*.egg-info/
+.venv/
+venv/

@@ -1,0 +1,1540 @@
+{
+  "task": "支持无门槛优惠券（coupon.threshold = 0）：无门槛券不做门槛判定即可使用；门槛判定使用 >= 而不是 >；负门槛视为券配置错误。",
+  "generated_at": "2026-11-14T09:54:02",
+  "specs": [
+    {
+      "spec_id": "REQ-CPN-003",
+      "spec_kind": "requirement",
+      "title": "门槛判定使用大于等于",
+      "body": "订单**商品小计大于或等于**券门槛时，券即可使用；恰好等于门槛的订单同样可以使用。\n门槛判定只针对 `threshold > 0` 的券。",
+      "status": "active",
+      "status_label": "生效中",
+      "module": "demo_app.pricing",
+      "symbols": [
+        "apply_coupon"
+      ],
+      "tags": [
+        "coupon",
+        "threshold",
+        "边界",
+        "门槛"
+      ],
+      "source_file": "specs/coupon-rules.md",
+      "source_line": 32,
+      "doc_version": "1.3",
+      "superseded_by": null,
+      "retire_reason": null,
+      "content_sha256": "3c6ce96a3fff17ec0544cd3bebccc848ab0b7cb728f5777b6cc4fd462e037bb5",
+      "source_ref": "specs/coupon-rules.md:32#REQ-CPN-003"
+    },
+    {
+      "spec_id": "REQ-CPN-004",
+      "spec_kind": "requirement",
+      "title": "无门槛券",
+      "body": "券的 `threshold` 为 0 表示**无门槛券**：不做任何门槛判定，任意非空订单都可以使用；\n券的减免额仍然受 `max_discount` 封顶，且不得超过订单商品小计，运费照常隔离在优惠基数之外。\n（v1.3 修订：明确无门槛券同样受减免上限与运费隔离约束，门槛判定被跳过不代表其他规则失效。）",
+      "status": "active",
+      "status_label": "生效中",
+      "module": "demo_app.pricing",
+      "symbols": [
+        "apply_coupon",
+        "Coupon"
+      ],
+      "tags": [
+        "coupon",
+        "threshold",
+        "边界",
+        "无门槛"
+      ],
+      "source_file": "specs/coupon-rules.md",
+      "source_line": 42,
+      "doc_version": "1.3",
+      "superseded_by": null,
+      "retire_reason": null,
+      "content_sha256": "63905905d438c9747423de252bd1d150e01108972cca341bddb59207e1e7b28d",
+      "source_ref": "specs/coupon-rules.md:42#REQ-CPN-004"
+    },
+    {
+      "spec_id": "REQ-CPN-008",
+      "spec_kind": "requirement",
+      "title": "负门槛属于券配置错误",
+      "body": "券的 `threshold` 为负数属于**券配置错误**，`apply_coupon` 必须抛出\n`CouponNotApplicable`（与引入无门槛券之前的既有行为保持一致）。\n只有 `threshold == 0`（无门槛）与 `threshold > 0`（有门槛）两种取值是合法的。",
+      "status": "active",
+      "status_label": "生效中",
+      "module": "demo_app.pricing",
+      "symbols": [
+        "apply_coupon"
+      ],
+      "tags": [
+        "coupon",
+        "threshold",
+        "边界",
+        "配置校验"
+      ],
+      "source_file": "specs/coupon-rules.md",
+      "source_line": 83,
+      "doc_version": "1.3",
+      "superseded_by": null,
+      "retire_reason": null,
+      "content_sha256": "7f53496662310f1920de6cab3fa5bd747e1bd776d124b3d3d2208b7ebb88bbbe",
+      "source_ref": "specs/coupon-rules.md:83#REQ-CPN-008"
+    },
+    {
+      "spec_id": "REQ-CPN-006",
+      "spec_kind": "requirement",
+      "title": "运费不参与优惠计算",
+      "body": "门槛判定与优惠金额计算都只使用订单**商品小计**，运费不计入优惠基数；\n无门槛券（`threshold = 0`）同样不把运费计入优惠基数。\n（v1.3 修订：补充无门槛券在运费隔离上的口径，与 ADR-002、ADR-006 保持一致。）",
+      "status": "active",
+      "status_label": "生效中",
+      "module": "demo_app.pricing, demo_app.models",
+      "symbols": [
+        "apply_coupon",
+        "Order.subtotal"
+      ],
+      "tags": [
+        "coupon",
+        "freight",
+        "运费"
+      ],
+      "source_file": "specs/coupon-rules.md",
+      "source_line": 62,
+      "doc_version": "1.3",
+      "superseded_by": null,
+      "retire_reason": null,
+      "content_sha256": "b172b6d4429d8d4ec280b14490fddfe19d6f056e992321af981c5e99b53600f5",
+      "source_ref": "specs/coupon-rules.md:62#REQ-CPN-006"
+    },
+    {
+      "spec_id": "ADR-006",
+      "spec_kind": "decision",
+      "title": "无门槛券同样受减免上限与运费隔离约束",
+      "body": "引入无门槛券（`threshold == 0`）之后，**门槛判定**被跳过，但**减免上限**（`max_discount`）、\n**不超过商品金额**（ADR-005）与**运费隔离**（ADR-002）对无门槛券同样成立。\n该决策澄清了 ADR-005 的适用范围：封顶规则不区分券是否设置了门槛。",
+      "status": "active",
+      "status_label": "生效中",
+      "module": "demo_app.pricing",
+      "symbols": [
+        "apply_coupon"
+      ],
+      "tags": [
+        "decision",
+        "threshold",
+        "无门槛",
+        "cap",
+        "运费"
+      ],
+      "source_file": "specs/decisions.md",
+      "source_line": 62,
+      "doc_version": "1.4",
+      "superseded_by": null,
+      "retire_reason": null,
+      "content_sha256": "ba1dabf6a947c8c825aa957373f9cf0c0fde37f55e9d18412d738d9849e6e60f",
+      "source_ref": "specs/decisions.md:62#ADR-006"
+    },
+    {
+      "spec_id": "ADR-002",
+      "spec_kind": "decision",
+      "title": "运费不参与优惠计算",
+      "body": "优惠基数与门槛判定都使用商品小计，运费只在应付金额阶段加入。",
+      "status": "active",
+      "status_label": "生效中",
+      "module": "demo_app.pricing",
+      "symbols": [
+        "apply_coupon",
+        "Order.subtotal"
+      ],
+      "tags": [
+        "decision",
+        "freight",
+        "运费"
+      ],
+      "source_file": "specs/decisions.md",
+      "source_line": 20,
+      "doc_version": "1.4",
+      "superseded_by": null,
+      "retire_reason": null,
+      "content_sha256": "13dac0f701f1a7682f3c13b6fbb36d6d550a115aeaf06a86bebeaddc6d3fff65",
+      "source_ref": "specs/decisions.md:20#ADR-002"
+    },
+    {
+      "spec_id": "REQ-CPN-001",
+      "spec_kind": "requirement",
+      "title": "满减券按固定金额减免",
+      "body": "满减券（`CouponKind.THRESHOLD`）在订单满足使用门槛时，按券的 `value` 减免固定金额，\n不受订单金额比例影响。",
+      "status": "active",
+      "status_label": "生效中",
+      "module": "demo_app.pricing",
+      "symbols": [
+        "apply_coupon"
+      ],
+      "tags": [
+        "coupon",
+        "threshold",
+        "满减"
+      ],
+      "source_file": "specs/coupon-rules.md",
+      "source_line": 12,
+      "doc_version": "1.3",
+      "superseded_by": null,
+      "retire_reason": null,
+      "content_sha256": "1a5895c40d0d0e3318580e37a03d4164d7f9edf5b931a9c2a276460c6cffa725",
+      "source_ref": "specs/coupon-rules.md:12#REQ-CPN-001"
+    },
+    {
+      "spec_id": "REQ-API-004",
+      "spec_kind": "requirement",
+      "title": "券不适用时抛出 CouponNotApplicable",
+      "body": "订单不满足券的使用条件时，`apply_coupon` 必须抛出 `CouponNotApplicable`，异常信息包含券编号。",
+      "status": "active",
+      "status_label": "生效中",
+      "module": "demo_app.pricing",
+      "symbols": [
+        "apply_coupon",
+        "CouponNotApplicable"
+      ],
+      "tags": [
+        "api",
+        "error",
+        "契约"
+      ],
+      "source_file": "specs/order-settlement-api.md",
+      "source_line": 39,
+      "doc_version": "1.1",
+      "superseded_by": null,
+      "retire_reason": null,
+      "content_sha256": "05638976a849ef6d2b2535f32b31f0f98302630b8c0bb235b42f90ffa37ec87a",
+      "source_ref": "specs/order-settlement-api.md:39#REQ-API-004"
+    },
+    {
+      "spec_id": "REQ-CPN-005",
+      "spec_kind": "requirement",
+      "title": "优惠金额上限",
+      "body": "单笔优惠金额不得超过券的 `max_discount`，且优惠金额不得超过订单商品小计。",
+      "status": "active",
+      "status_label": "生效中",
+      "module": "demo_app.pricing",
+      "symbols": [
+        "apply_coupon"
+      ],
+      "tags": [
+        "coupon",
+        "cap",
+        "上限"
+      ],
+      "source_file": "specs/coupon-rules.md",
+      "source_line": 53,
+      "doc_version": "1.3",
+      "superseded_by": null,
+      "retire_reason": null,
+      "content_sha256": "c5ebc3e05d2dc832df5b182f646b0b9446b19a81bef3caebacb814efe15102a9",
+      "source_ref": "specs/coupon-rules.md:53#REQ-CPN-005"
+    },
+    {
+      "spec_id": "REQ-CPN-002",
+      "spec_kind": "requirement",
+      "title": "折扣券按比例减免",
+      "body": "折扣券（`CouponKind.DISCOUNT`）在订单满足使用门槛时，按券的 `value` 比例对**商品小计**\n减免，比例为小数形式（例如 0.8 表示八折）。",
+      "status": "active",
+      "status_label": "生效中",
+      "module": "demo_app.pricing",
+      "symbols": [
+        "apply_coupon"
+      ],
+      "tags": [
+        "coupon",
+        "discount",
+        "折扣"
+      ],
+      "source_file": "specs/coupon-rules.md",
+      "source_line": 22,
+      "doc_version": "1.3",
+      "superseded_by": null,
+      "retire_reason": null,
+      "content_sha256": "efcba1205ff401d43f9d9692c35bcf537ee3018ccae45454026fab4465d5713a",
+      "source_ref": "specs/coupon-rules.md:22#REQ-CPN-002"
+    },
+    {
+      "spec_id": "REQ-API-003",
+      "spec_kind": "requirement",
+      "title": "无优惠券时的结算",
+      "body": "不传优惠券时，优惠金额为 0，结算正常返回，不抛出异常。",
+      "status": "active",
+      "status_label": "生效中",
+      "module": "demo_app.pricing",
+      "symbols": [
+        "settle"
+      ],
+      "tags": [
+        "api",
+        "settlement",
+        "契约"
+      ],
+      "source_file": "specs/order-settlement-api.md",
+      "source_line": 30,
+      "doc_version": "1.1",
+      "superseded_by": null,
+      "retire_reason": null,
+      "content_sha256": "9731db8d402c128d277671f76774b552f11a224128a7a6455bbcf1e9063e6373",
+      "source_ref": "specs/order-settlement-api.md:30#REQ-API-003"
+    },
+    {
+      "spec_id": "ADR-001",
+      "spec_kind": "decision",
+      "title": "金额一律使用 Decimal",
+      "body": "禁止使用 float 表示金额，避免二进制浮点误差累积。",
+      "status": "active",
+      "status_label": "生效中",
+      "module": "demo_app.pricing, demo_app.models",
+      "symbols": [
+        "apply_coupon",
+        "settle"
+      ],
+      "tags": [
+        "decision",
+        "money",
+        "decimal"
+      ],
+      "source_file": "specs/decisions.md",
+      "source_line": 11,
+      "doc_version": "1.4",
+      "superseded_by": null,
+      "retire_reason": null,
+      "content_sha256": "332101ce65750d5a3312532dc4802a8d1e6405aafce251af4a35259fcc52c56e",
+      "source_ref": "specs/decisions.md:11#ADR-001"
+    }
+  ],
+  "retired_specs": [
+    {
+      "spec_id": "ADR-004",
+      "spec_kind": "decision",
+      "title": "折扣券必须配置正门槛",
+      "body": "历史决策：所有券必须配置正门槛，`threshold <= 0` 视为券配置错误。\n该决策已被 REQ-CPN-004 取代，不再约束当前实现。",
+      "status": "superseded",
+      "status_label": "已失效",
+      "module": "demo_app.pricing",
+      "symbols": [
+        "apply_coupon",
+        "Coupon"
+      ],
+      "tags": [
+        "decision",
+        "threshold",
+        "无门槛"
+      ],
+      "source_file": "specs/decisions.md",
+      "source_line": 41,
+      "doc_version": "1.4",
+      "superseded_by": null,
+      "retire_reason": "REQ-CPN-004 引入无门槛券",
+      "content_sha256": "f8fd289955fb9ed0f08eb83bdb9b1270c02019e3d3d65f73bdcf64e9edc24f44",
+      "source_ref": "specs/decisions.md:41#ADR-004"
+    },
+    {
+      "spec_id": "ADR-003",
+      "spec_kind": "decision",
+      "title": "折扣券门槛使用严格大于比较",
+      "body": "历史决策：门槛判定使用严格大于（`subtotal > threshold`），恰好等于门槛不可用。\n该决策已被 REQ-CPN-003 取代，不再约束当前实现。",
+      "status": "superseded",
+      "status_label": "已失效",
+      "module": "demo_app.pricing",
+      "symbols": [
+        "apply_coupon"
+      ],
+      "tags": [
+        "decision",
+        "threshold",
+        "边界"
+      ],
+      "source_file": "specs/decisions.md",
+      "source_line": 29,
+      "doc_version": "1.4",
+      "superseded_by": null,
+      "retire_reason": "REQ-CPN-003 明确门槛判定使用大于等于",
+      "content_sha256": "62e3f539b7d42bdbb5b2b341b57e94389c2e5dd0f3b176b9b25c3dfab7284622",
+      "source_ref": "specs/decisions.md:29#ADR-003"
+    }
+  ],
+  "code": [
+    {
+      "symbol_id": "demo_app.pricing.Coupon",
+      "module": "demo_app.pricing",
+      "file_path": "demo_app/pricing.py",
+      "symbol": "Coupon",
+      "kind": "class",
+      "signature": "class Coupon: \"\"\"优惠券。",
+      "body": "class Coupon:\n    \"\"\"优惠券。\n\n    Attributes:\n        coupon_id: 券编号。\n        kind: 券类型。\n        threshold: 使用门槛，0 表示无门槛券。\n        value: 满减券为减免金额，折扣券为折扣比例（0 < value < 1）。\n        max_discount: 单笔最大减免金额。\n    \"\"\"\n\n    coupon_id: str\n    kind: CouponKind\n    threshold: Decimal\n    value: Decimal\n    max_discount: Decimal",
+      "line_start": 28,
+      "line_end": 43,
+      "source_ref": "demo_app/pricing.py:28-43#Coupon"
+    },
+    {
+      "symbol_id": "demo_app.pricing.apply_coupon",
+      "module": "demo_app.pricing",
+      "file_path": "demo_app/pricing.py",
+      "symbol": "apply_coupon",
+      "kind": "function",
+      "signature": "def apply_coupon(order: Order, coupon: Coupon) -> Decimal: \"\"\"计算优惠券对订单产生的优惠金额。",
+      "body": "def apply_coupon(order: Order, coupon: Coupon) -> Decimal:\n    \"\"\"计算优惠券对订单产生的优惠金额。\n\n    Args:\n        order: 待结算订单。\n        coupon: 待使用的优惠券。\n\n    Returns:\n        优惠金额（两位小数）。\n\n    Raises:\n        CouponNotApplicable: 订单不满足该券的使用条件。\n    \"\"\"\n    subtotal = order.subtotal\n    if coupon.threshold <= 0:\n        raise CouponNotApplicable(\n            f\"coupon {coupon.coupon_id} requires a positive threshold\"\n        )\n    if subtotal <= coupon.threshold:\n        raise CouponNotApplicable(\n            f\"coupon {coupon.coupon_id} requires subtotal >= {coupon.threshold}\"\n        )\n    if coupon.kind is CouponKind.THRESHOLD:\n        discount = coupon.value\n    else:\n        discount = subtotal * coupon.value\n    discount = min(discount, coupon.max_discount)\n    discount = min(discount, subtotal)\n    return _round_money(discount)",
+      "line_start": 61,
+      "line_end": 89,
+      "source_ref": "demo_app/pricing.py:61-89#apply_coupon"
+    },
+    {
+      "symbol_id": "demo_app.pricing.settle",
+      "module": "demo_app.pricing",
+      "file_path": "demo_app/pricing.py",
+      "symbol": "settle",
+      "kind": "function",
+      "signature": "def settle(order: Order, coupon: Coupon | None = None) -> SettlementResult: \"\"\"结算订单，返回商品小计、优惠金额、运费与应付金额。",
+      "body": "def settle(order: Order, coupon: Coupon | None = None) -> SettlementResult:\n    \"\"\"结算订单，返回商品小计、优惠金额、运费与应付金额。\n\n    运费不参与优惠计算，但计入应付金额。\n    \"\"\"\n    subtotal = order.subtotal\n    freight = order.freight\n    discount = Decimal(\"0\") if coupon is None else apply_coupon(order, coupon)\n    payable = subtotal - discount + freight\n    return SettlementResult(\n        subtotal=subtotal,\n        discount=discount,\n        freight=freight,\n        payable=_round_money(payable),\n    )",
+      "line_start": 92,
+      "line_end": 106,
+      "source_ref": "demo_app/pricing.py:92-106#settle"
+    },
+    {
+      "symbol_id": "demo_app.pricing.CouponKind",
+      "module": "demo_app.pricing",
+      "file_path": "demo_app/pricing.py",
+      "symbol": "CouponKind",
+      "kind": "class",
+      "signature": "class CouponKind(str, Enum): \"\"\"券类型。\"\"\"",
+      "body": "class CouponKind(str, Enum):\n    \"\"\"券类型。\"\"\"\n\n    THRESHOLD = \"threshold\"  # 满减券：满 threshold 减 value\n    DISCOUNT = \"discount\"  # 折扣券：按 value 比例减免",
+      "line_start": 20,
+      "line_end": 24,
+      "source_ref": "demo_app/pricing.py:20-24#CouponKind"
+    },
+    {
+      "symbol_id": "demo_app.pricing.CouponNotApplicable",
+      "module": "demo_app.pricing",
+      "file_path": "demo_app/pricing.py",
+      "symbol": "CouponNotApplicable",
+      "kind": "class",
+      "signature": "class CouponNotApplicable(Exception): \"\"\"优惠券不适用于该订单。\"\"\"",
+      "body": "class CouponNotApplicable(Exception):\n    \"\"\"优惠券不适用于该订单。\"\"\"",
+      "line_start": 16,
+      "line_end": 17,
+      "source_ref": "demo_app/pricing.py:16-17#CouponNotApplicable"
+    },
+    {
+      "symbol_id": "demo_app.models.Order",
+      "module": "demo_app.models",
+      "file_path": "demo_app/models.py",
+      "symbol": "Order",
+      "kind": "class",
+      "signature": "class Order: \"\"\"订单。``freight`` 为运费，不参与优惠计算。\"\"\"",
+      "body": "class Order:\n    \"\"\"订单。``freight`` 为运费，不参与优惠计算。\"\"\"\n\n    order_id: str\n    items: tuple[LineItem, ...]\n    freight: Decimal = Decimal(\"0\")\n\n    @property\n    def subtotal(self) -> Decimal:\n        \"\"\"商品小计（不含运费）。\"\"\"\n        total = Decimal(\"0\")\n        for item in self.items:\n            total += item.line_total\n        return total",
+      "line_start": 28,
+      "line_end": 41,
+      "source_ref": "demo_app/models.py:28-41#Order"
+    }
+  ],
+  "tests": [
+    {
+      "test_id": "demo_app/tests/test_coupon_regression.py::test_negative_threshold_coupon_is_rejected",
+      "file_path": "demo_app/tests/test_coupon_regression.py",
+      "test_name": "test_negative_threshold_coupon_is_rejected",
+      "kind": "regression",
+      "module": "demo_app.test_coupon_regression",
+      "docstring": "REQ-CPN-008：负门槛属于券配置错误，必须拒绝（引入无门槛券之前即如此）。",
+      "body": "def test_negative_threshold_coupon_is_rejected() -> None:\n    \"\"\"REQ-CPN-008：负门槛属于券配置错误，必须拒绝（引入无门槛券之前即如此）。\"\"\"\n    order = _order(subtotal=\"100.00\")\n    with pytest.raises(CouponNotApplicable):\n        apply_coupon(order, _coupon(threshold=Decimal(\"-1.00\")))",
+      "line_start": 113,
+      "line_end": 117,
+      "source_ref": "demo_app/tests/test_coupon_regression.py:113-117::test_negative_threshold_coupon_is_rejected"
+    },
+    {
+      "test_id": "demo_app/tests/test_coupon_regression.py::test_discount_coupon_rejected_when_below_threshold",
+      "file_path": "demo_app/tests/test_coupon_regression.py",
+      "test_name": "test_discount_coupon_rejected_when_below_threshold",
+      "kind": "regression",
+      "module": "demo_app.test_coupon_regression",
+      "docstring": "未达门槛的订单不可使用券。",
+      "body": "def test_discount_coupon_rejected_when_below_threshold() -> None:\n    \"\"\"未达门槛的订单不可使用券。\"\"\"\n    order = _order(subtotal=\"30.00\")\n    with pytest.raises(CouponNotApplicable):\n        apply_coupon(order, _coupon(threshold=Decimal(\"50.00\")))",
+      "line_start": 42,
+      "line_end": 46,
+      "source_ref": "demo_app/tests/test_coupon_regression.py:42-46::test_discount_coupon_rejected_when_below_threshold"
+    },
+    {
+      "test_id": "demo_app/tests/test_coupon_regression.py::test_threshold_coupon_reduces_fixed_amount",
+      "file_path": "demo_app/tests/test_coupon_regression.py",
+      "test_name": "test_threshold_coupon_reduces_fixed_amount",
+      "kind": "regression",
+      "module": "demo_app.test_coupon_regression",
+      "docstring": "满减券按固定金额减免。",
+      "body": "def test_threshold_coupon_reduces_fixed_amount() -> None:\n    \"\"\"满减券按固定金额减免。\"\"\"\n    order = _order(subtotal=\"200.00\")\n    coupon = _coupon(\n        kind=CouponKind.THRESHOLD,\n        threshold=Decimal(\"100.00\"),\n        value=Decimal(\"30.00\"),\n    )\n    assert apply_coupon(order, coupon) == Decimal(\"30.00\")",
+      "line_start": 49,
+      "line_end": 57,
+      "source_ref": "demo_app/tests/test_coupon_regression.py:49-57::test_threshold_coupon_reduces_fixed_amount"
+    },
+    {
+      "test_id": "demo_app/tests/test_coupon_regression.py::test_discount_never_exceeds_subtotal",
+      "file_path": "demo_app/tests/test_coupon_regression.py",
+      "test_name": "test_discount_never_exceeds_subtotal",
+      "kind": "regression",
+      "module": "demo_app.test_coupon_regression",
+      "docstring": "优惠金额不得超过商品小计。",
+      "body": "def test_discount_never_exceeds_subtotal() -> None:\n    \"\"\"优惠金额不得超过商品小计。\"\"\"\n    order = _order(subtotal=\"20.00\")\n    coupon = _coupon(\n        kind=CouponKind.THRESHOLD,\n        threshold=Decimal(\"10.00\"),\n        value=Decimal(\"50.00\"),\n    )\n    assert apply_coupon(order, coupon) == Decimal(\"20.00\")",
+      "line_start": 67,
+      "line_end": 75,
+      "source_ref": "demo_app/tests/test_coupon_regression.py:67-75::test_discount_never_exceeds_subtotal"
+    },
+    {
+      "test_id": "demo_app/tests/test_coupon_regression.py::test_settlement_without_coupon",
+      "file_path": "demo_app/tests/test_coupon_regression.py",
+      "test_name": "test_settlement_without_coupon",
+      "kind": "regression",
+      "module": "demo_app.test_coupon_regression",
+      "docstring": "不使用优惠券时优惠金额为 0。",
+      "body": "def test_settlement_without_coupon() -> None:\n    \"\"\"不使用优惠券时优惠金额为 0。\"\"\"\n    order = _order(subtotal=\"100.00\", freight=\"5.00\")\n    result = settle(order)\n    assert result.discount == Decimal(\"0.00\")\n    assert result.payable == Decimal(\"105.00\")",
+      "line_start": 97,
+      "line_end": 102,
+      "source_ref": "demo_app/tests/test_coupon_regression.py:97-102::test_settlement_without_coupon"
+    },
+    {
+      "test_id": "demo_app/tests/test_coupon_regression.py::test_discount_coupon_respects_max_discount",
+      "file_path": "demo_app/tests/test_coupon_regression.py",
+      "test_name": "test_discount_coupon_respects_max_discount",
+      "kind": "regression",
+      "module": "demo_app.test_coupon_regression",
+      "docstring": "优惠金额受 max_discount 封顶。",
+      "body": "def test_discount_coupon_respects_max_discount() -> None:\n    \"\"\"优惠金额受 max_discount 封顶。\"\"\"\n    order = _order(subtotal=\"1000.00\")\n    coupon = _coupon(value=Decimal(\"0.5\"), max_discount=Decimal(\"100.00\"))\n    assert apply_coupon(order, coupon) == Decimal(\"100.00\")",
+      "line_start": 60,
+      "line_end": 64,
+      "source_ref": "demo_app/tests/test_coupon_regression.py:60-64::test_discount_coupon_respects_max_discount"
+    },
+    {
+      "test_id": "demo_app/tests/test_coupon_regression.py::test_freight_excluded_from_coupon_base",
+      "file_path": "demo_app/tests/test_coupon_regression.py",
+      "test_name": "test_freight_excluded_from_coupon_base",
+      "kind": "regression",
+      "module": "demo_app.test_coupon_regression",
+      "docstring": "运费不参与优惠计算。",
+      "body": "def test_freight_excluded_from_coupon_base() -> None:\n    \"\"\"运费不参与优惠计算。\"\"\"\n    order = _order(subtotal=\"100.00\", freight=\"20.00\")\n    coupon = _coupon(value=Decimal(\"0.9\"), max_discount=Decimal(\"1000.00\"))\n    # 只对 100 的商品小计减免，运费 20 不参与。\n    assert apply_coupon(order, coupon) == Decimal(\"90.00\")",
+      "line_start": 78,
+      "line_end": 83,
+      "source_ref": "demo_app/tests/test_coupon_regression.py:78-83::test_freight_excluded_from_coupon_base"
+    },
+    {
+      "test_id": "demo_app/tests/test_coupon_regression.py::test_not_applicable_error_mentions_coupon_id",
+      "file_path": "demo_app/tests/test_coupon_regression.py",
+      "test_name": "test_not_applicable_error_mentions_coupon_id",
+      "kind": "regression",
+      "module": "demo_app.test_coupon_regression",
+      "docstring": "异常信息包含券编号。",
+      "body": "def test_not_applicable_error_mentions_coupon_id() -> None:\n    \"\"\"异常信息包含券编号。\"\"\"\n    order = _order(subtotal=\"10.00\")\n    with pytest.raises(CouponNotApplicable) as excinfo:\n        apply_coupon(order, _coupon(coupon_id=\"CPN-XYZ\", threshold=Decimal(\"50.00\")))\n    assert \"CPN-XYZ\" in str(excinfo.value)",
+      "line_start": 105,
+      "line_end": 110,
+      "source_ref": "demo_app/tests/test_coupon_regression.py:105-110::test_not_applicable_error_mentions_coupon_id"
+    },
+    {
+      "test_id": "demo_app/tests/test_coupon_regression.py::test_settlement_total_includes_freight",
+      "file_path": "demo_app/tests/test_coupon_regression.py",
+      "test_name": "test_settlement_total_includes_freight",
+      "kind": "regression",
+      "module": "demo_app.test_coupon_regression",
+      "docstring": "应付金额包含运费。",
+      "body": "def test_settlement_total_includes_freight() -> None:\n    \"\"\"应付金额包含运费。\"\"\"\n    order = _order(subtotal=\"100.00\", freight=\"12.50\")\n    coupon = _coupon(value=Decimal(\"0.9\"))\n    result = settle(order, coupon)\n    assert result.subtotal == Decimal(\"100.00\")\n    assert result.discount == Decimal(\"90.00\")\n    assert result.freight == Decimal(\"12.50\")\n    assert result.payable == Decimal(\"22.50\")",
+      "line_start": 86,
+      "line_end": 94,
+      "source_ref": "demo_app/tests/test_coupon_regression.py:86-94::test_settlement_total_includes_freight"
+    },
+    {
+      "test_id": "demo_app/tests/test_coupon_threshold.py::test_no_threshold_discount_coupon_is_applicable",
+      "file_path": "demo_app/tests/test_coupon_threshold.py",
+      "test_name": "test_no_threshold_discount_coupon_is_applicable",
+      "kind": "target",
+      "module": "demo_app.test_coupon_threshold",
+      "docstring": "REQ-CPN-004：threshold 为 0 的券是无门槛券，任意商品金额都可使用。",
+      "body": "def test_no_threshold_discount_coupon_is_applicable() -> None:\n    \"\"\"REQ-CPN-004：threshold 为 0 的券是无门槛券，任意商品金额都可使用。\"\"\"\n    order = _order(subtotal=\"50.00\")\n    coupon = _coupon(threshold=Decimal(\"0.00\"), value=Decimal(\"0.9\"))\n    assert apply_coupon(order, coupon) == Decimal(\"45.00\")",
+      "line_start": 37,
+      "line_end": 41,
+      "source_ref": "demo_app/tests/test_coupon_threshold.py:37-41::test_no_threshold_discount_coupon_is_applicable"
+    },
+    {
+      "test_id": "demo_app/tests/test_coupon_threshold.py::test_discount_coupon_applies_at_exact_threshold",
+      "file_path": "demo_app/tests/test_coupon_threshold.py",
+      "test_name": "test_discount_coupon_applies_at_exact_threshold",
+      "kind": "target",
+      "module": "demo_app.test_coupon_threshold",
+      "docstring": "REQ-CPN-003：商品小计恰好等于门槛时券即可使用。",
+      "body": "def test_discount_coupon_applies_at_exact_threshold() -> None:\n    \"\"\"REQ-CPN-003：商品小计恰好等于门槛时券即可使用。\"\"\"\n    order = _order(subtotal=\"100.00\")\n    coupon = _coupon(threshold=Decimal(\"100.00\"), value=Decimal(\"0.9\"))\n    assert apply_coupon(order, coupon) == Decimal(\"90.00\")",
+      "line_start": 44,
+      "line_end": 48,
+      "source_ref": "demo_app/tests/test_coupon_threshold.py:44-48::test_discount_coupon_applies_at_exact_threshold"
+    },
+    {
+      "test_id": "demo_app/tests/test_coupon_threshold.py::test_no_threshold_coupon_respects_max_discount",
+      "file_path": "demo_app/tests/test_coupon_threshold.py",
+      "test_name": "test_no_threshold_coupon_respects_max_discount",
+      "kind": "target",
+      "module": "demo_app.test_coupon_threshold",
+      "docstring": "REQ-CPN-004 + REQ-CPN-005：无门槛券同样受 max_discount 封顶。",
+      "body": "def test_no_threshold_coupon_respects_max_discount() -> None:\n    \"\"\"REQ-CPN-004 + REQ-CPN-005：无门槛券同样受 max_discount 封顶。\"\"\"\n    order = _order(subtotal=\"1000.00\")\n    coupon = _coupon(\n        threshold=Decimal(\"0.00\"),\n        value=Decimal(\"0.5\"),\n        max_discount=Decimal(\"100.00\"),\n    )\n    assert apply_coupon(order, coupon) == Decimal(\"100.00\")",
+      "line_start": 51,
+      "line_end": 59,
+      "source_ref": "demo_app/tests/test_coupon_threshold.py:51-59::test_no_threshold_coupon_respects_max_discount"
+    },
+    {
+      "test_id": "demo_app/tests/test_coupon_threshold.py::test_no_threshold_coupon_base_excludes_freight",
+      "file_path": "demo_app/tests/test_coupon_threshold.py",
+      "test_name": "test_no_threshold_coupon_base_excludes_freight",
+      "kind": "target",
+      "module": "demo_app.test_coupon_threshold",
+      "docstring": "REQ-CPN-006：无门槛券的减免基数同样只含商品小计。",
+      "body": "def test_no_threshold_coupon_base_excludes_freight() -> None:\n    \"\"\"REQ-CPN-006：无门槛券的减免基数同样只含商品小计。\"\"\"\n    order = _order(subtotal=\"100.00\", freight=\"30.00\")\n    coupon = _coupon(threshold=Decimal(\"0.00\"), value=Decimal(\"0.9\"))\n    assert apply_coupon(order, coupon) == Decimal(\"90.00\")",
+      "line_start": 62,
+      "line_end": 66,
+      "source_ref": "demo_app/tests/test_coupon_threshold.py:62-66::test_no_threshold_coupon_base_excludes_freight"
+    },
+    {
+      "test_id": "demo_app/tests/test_coupon_threshold.py::test_no_threshold_coupon_in_settlement",
+      "file_path": "demo_app/tests/test_coupon_threshold.py",
+      "test_name": "test_no_threshold_coupon_in_settlement",
+      "kind": "target",
+      "module": "demo_app.test_coupon_threshold",
+      "docstring": "REQ-CPN-004：无门槛券可完成整单结算。",
+      "body": "def test_no_threshold_coupon_in_settlement() -> None:\n    \"\"\"REQ-CPN-004：无门槛券可完成整单结算。\"\"\"\n    order = _order(subtotal=\"80.00\", freight=\"10.00\")\n    coupon = _coupon(threshold=Decimal(\"0.00\"), value=Decimal(\"0.75\"))\n    result = settle(order, coupon)\n    assert result.discount == Decimal(\"60.00\")\n    assert result.payable == Decimal(\"30.00\")",
+      "line_start": 69,
+      "line_end": 75,
+      "source_ref": "demo_app/tests/test_coupon_threshold.py:69-75::test_no_threshold_coupon_in_settlement"
+    }
+  ],
+  "target_tests": [
+    {
+      "test_id": "demo_app/tests/test_coupon_threshold.py::test_no_threshold_discount_coupon_is_applicable",
+      "file_path": "demo_app/tests/test_coupon_threshold.py",
+      "test_name": "test_no_threshold_discount_coupon_is_applicable",
+      "kind": "target",
+      "module": "demo_app.test_coupon_threshold",
+      "docstring": "REQ-CPN-004：threshold 为 0 的券是无门槛券，任意商品金额都可使用。",
+      "body": "def test_no_threshold_discount_coupon_is_applicable() -> None:\n    \"\"\"REQ-CPN-004：threshold 为 0 的券是无门槛券，任意商品金额都可使用。\"\"\"\n    order = _order(subtotal=\"50.00\")\n    coupon = _coupon(threshold=Decimal(\"0.00\"), value=Decimal(\"0.9\"))\n    assert apply_coupon(order, coupon) == Decimal(\"45.00\")",
+      "line_start": 37,
+      "line_end": 41,
+      "source_ref": "demo_app/tests/test_coupon_threshold.py:37-41::test_no_threshold_discount_coupon_is_applicable"
+    },
+    {
+      "test_id": "demo_app/tests/test_coupon_threshold.py::test_discount_coupon_applies_at_exact_threshold",
+      "file_path": "demo_app/tests/test_coupon_threshold.py",
+      "test_name": "test_discount_coupon_applies_at_exact_threshold",
+      "kind": "target",
+      "module": "demo_app.test_coupon_threshold",
+      "docstring": "REQ-CPN-003：商品小计恰好等于门槛时券即可使用。",
+      "body": "def test_discount_coupon_applies_at_exact_threshold() -> None:\n    \"\"\"REQ-CPN-003：商品小计恰好等于门槛时券即可使用。\"\"\"\n    order = _order(subtotal=\"100.00\")\n    coupon = _coupon(threshold=Decimal(\"100.00\"), value=Decimal(\"0.9\"))\n    assert apply_coupon(order, coupon) == Decimal(\"90.00\")",
+      "line_start": 44,
+      "line_end": 48,
+      "source_ref": "demo_app/tests/test_coupon_threshold.py:44-48::test_discount_coupon_applies_at_exact_threshold"
+    },
+    {
+      "test_id": "demo_app/tests/test_coupon_threshold.py::test_no_threshold_coupon_respects_max_discount",
+      "file_path": "demo_app/tests/test_coupon_threshold.py",
+      "test_name": "test_no_threshold_coupon_respects_max_discount",
+      "kind": "target",
+      "module": "demo_app.test_coupon_threshold",
+      "docstring": "REQ-CPN-004 + REQ-CPN-005：无门槛券同样受 max_discount 封顶。",
+      "body": "def test_no_threshold_coupon_respects_max_discount() -> None:\n    \"\"\"REQ-CPN-004 + REQ-CPN-005：无门槛券同样受 max_discount 封顶。\"\"\"\n    order = _order(subtotal=\"1000.00\")\n    coupon = _coupon(\n        threshold=Decimal(\"0.00\"),\n        value=Decimal(\"0.5\"),\n        max_discount=Decimal(\"100.00\"),\n    )\n    assert apply_coupon(order, coupon) == Decimal(\"100.00\")",
+      "line_start": 51,
+      "line_end": 59,
+      "source_ref": "demo_app/tests/test_coupon_threshold.py:51-59::test_no_threshold_coupon_respects_max_discount"
+    },
+    {
+      "test_id": "demo_app/tests/test_coupon_threshold.py::test_no_threshold_coupon_base_excludes_freight",
+      "file_path": "demo_app/tests/test_coupon_threshold.py",
+      "test_name": "test_no_threshold_coupon_base_excludes_freight",
+      "kind": "target",
+      "module": "demo_app.test_coupon_threshold",
+      "docstring": "REQ-CPN-006：无门槛券的减免基数同样只含商品小计。",
+      "body": "def test_no_threshold_coupon_base_excludes_freight() -> None:\n    \"\"\"REQ-CPN-006：无门槛券的减免基数同样只含商品小计。\"\"\"\n    order = _order(subtotal=\"100.00\", freight=\"30.00\")\n    coupon = _coupon(threshold=Decimal(\"0.00\"), value=Decimal(\"0.9\"))\n    assert apply_coupon(order, coupon) == Decimal(\"90.00\")",
+      "line_start": 62,
+      "line_end": 66,
+      "source_ref": "demo_app/tests/test_coupon_threshold.py:62-66::test_no_threshold_coupon_base_excludes_freight"
+    },
+    {
+      "test_id": "demo_app/tests/test_coupon_threshold.py::test_no_threshold_coupon_in_settlement",
+      "file_path": "demo_app/tests/test_coupon_threshold.py",
+      "test_name": "test_no_threshold_coupon_in_settlement",
+      "kind": "target",
+      "module": "demo_app.test_coupon_threshold",
+      "docstring": "REQ-CPN-004：无门槛券可完成整单结算。",
+      "body": "def test_no_threshold_coupon_in_settlement() -> None:\n    \"\"\"REQ-CPN-004：无门槛券可完成整单结算。\"\"\"\n    order = _order(subtotal=\"80.00\", freight=\"10.00\")\n    coupon = _coupon(threshold=Decimal(\"0.00\"), value=Decimal(\"0.75\"))\n    result = settle(order, coupon)\n    assert result.discount == Decimal(\"60.00\")\n    assert result.payable == Decimal(\"30.00\")",
+      "line_start": 69,
+      "line_end": 75,
+      "source_ref": "demo_app/tests/test_coupon_threshold.py:69-75::test_no_threshold_coupon_in_settlement"
+    }
+  ],
+  "regression_tests": [
+    {
+      "test_id": "demo_app/tests/test_coupon_regression.py::test_negative_threshold_coupon_is_rejected",
+      "file_path": "demo_app/tests/test_coupon_regression.py",
+      "test_name": "test_negative_threshold_coupon_is_rejected",
+      "kind": "regression",
+      "module": "demo_app.test_coupon_regression",
+      "docstring": "REQ-CPN-008：负门槛属于券配置错误，必须拒绝（引入无门槛券之前即如此）。",
+      "body": "def test_negative_threshold_coupon_is_rejected() -> None:\n    \"\"\"REQ-CPN-008：负门槛属于券配置错误，必须拒绝（引入无门槛券之前即如此）。\"\"\"\n    order = _order(subtotal=\"100.00\")\n    with pytest.raises(CouponNotApplicable):\n        apply_coupon(order, _coupon(threshold=Decimal(\"-1.00\")))",
+      "line_start": 113,
+      "line_end": 117,
+      "source_ref": "demo_app/tests/test_coupon_regression.py:113-117::test_negative_threshold_coupon_is_rejected"
+    },
+    {
+      "test_id": "demo_app/tests/test_coupon_regression.py::test_discount_coupon_rejected_when_below_threshold",
+      "file_path": "demo_app/tests/test_coupon_regression.py",
+      "test_name": "test_discount_coupon_rejected_when_below_threshold",
+      "kind": "regression",
+      "module": "demo_app.test_coupon_regression",
+      "docstring": "未达门槛的订单不可使用券。",
+      "body": "def test_discount_coupon_rejected_when_below_threshold() -> None:\n    \"\"\"未达门槛的订单不可使用券。\"\"\"\n    order = _order(subtotal=\"30.00\")\n    with pytest.raises(CouponNotApplicable):\n        apply_coupon(order, _coupon(threshold=Decimal(\"50.00\")))",
+      "line_start": 42,
+      "line_end": 46,
+      "source_ref": "demo_app/tests/test_coupon_regression.py:42-46::test_discount_coupon_rejected_when_below_threshold"
+    },
+    {
+      "test_id": "demo_app/tests/test_coupon_regression.py::test_threshold_coupon_reduces_fixed_amount",
+      "file_path": "demo_app/tests/test_coupon_regression.py",
+      "test_name": "test_threshold_coupon_reduces_fixed_amount",
+      "kind": "regression",
+      "module": "demo_app.test_coupon_regression",
+      "docstring": "满减券按固定金额减免。",
+      "body": "def test_threshold_coupon_reduces_fixed_amount() -> None:\n    \"\"\"满减券按固定金额减免。\"\"\"\n    order = _order(subtotal=\"200.00\")\n    coupon = _coupon(\n        kind=CouponKind.THRESHOLD,\n        threshold=Decimal(\"100.00\"),\n        value=Decimal(\"30.00\"),\n    )\n    assert apply_coupon(order, coupon) == Decimal(\"30.00\")",
+      "line_start": 49,
+      "line_end": 57,
+      "source_ref": "demo_app/tests/test_coupon_regression.py:49-57::test_threshold_coupon_reduces_fixed_amount"
+    },
+    {
+      "test_id": "demo_app/tests/test_coupon_regression.py::test_discount_never_exceeds_subtotal",
+      "file_path": "demo_app/tests/test_coupon_regression.py",
+      "test_name": "test_discount_never_exceeds_subtotal",
+      "kind": "regression",
+      "module": "demo_app.test_coupon_regression",
+      "docstring": "优惠金额不得超过商品小计。",
+      "body": "def test_discount_never_exceeds_subtotal() -> None:\n    \"\"\"优惠金额不得超过商品小计。\"\"\"\n    order = _order(subtotal=\"20.00\")\n    coupon = _coupon(\n        kind=CouponKind.THRESHOLD,\n        threshold=Decimal(\"10.00\"),\n        value=Decimal(\"50.00\"),\n    )\n    assert apply_coupon(order, coupon) == Decimal(\"20.00\")",
+      "line_start": 67,
+      "line_end": 75,
+      "source_ref": "demo_app/tests/test_coupon_regression.py:67-75::test_discount_never_exceeds_subtotal"
+    },
+    {
+      "test_id": "demo_app/tests/test_coupon_regression.py::test_settlement_without_coupon",
+      "file_path": "demo_app/tests/test_coupon_regression.py",
+      "test_name": "test_settlement_without_coupon",
+      "kind": "regression",
+      "module": "demo_app.test_coupon_regression",
+      "docstring": "不使用优惠券时优惠金额为 0。",
+      "body": "def test_settlement_without_coupon() -> None:\n    \"\"\"不使用优惠券时优惠金额为 0。\"\"\"\n    order = _order(subtotal=\"100.00\", freight=\"5.00\")\n    result = settle(order)\n    assert result.discount == Decimal(\"0.00\")\n    assert result.payable == Decimal(\"105.00\")",
+      "line_start": 97,
+      "line_end": 102,
+      "source_ref": "demo_app/tests/test_coupon_regression.py:97-102::test_settlement_without_coupon"
+    },
+    {
+      "test_id": "demo_app/tests/test_coupon_regression.py::test_discount_coupon_respects_max_discount",
+      "file_path": "demo_app/tests/test_coupon_regression.py",
+      "test_name": "test_discount_coupon_respects_max_discount",
+      "kind": "regression",
+      "module": "demo_app.test_coupon_regression",
+      "docstring": "优惠金额受 max_discount 封顶。",
+      "body": "def test_discount_coupon_respects_max_discount() -> None:\n    \"\"\"优惠金额受 max_discount 封顶。\"\"\"\n    order = _order(subtotal=\"1000.00\")\n    coupon = _coupon(value=Decimal(\"0.5\"), max_discount=Decimal(\"100.00\"))\n    assert apply_coupon(order, coupon) == Decimal(\"100.00\")",
+      "line_start": 60,
+      "line_end": 64,
+      "source_ref": "demo_app/tests/test_coupon_regression.py:60-64::test_discount_coupon_respects_max_discount"
+    },
+    {
+      "test_id": "demo_app/tests/test_coupon_regression.py::test_freight_excluded_from_coupon_base",
+      "file_path": "demo_app/tests/test_coupon_regression.py",
+      "test_name": "test_freight_excluded_from_coupon_base",
+      "kind": "regression",
+      "module": "demo_app.test_coupon_regression",
+      "docstring": "运费不参与优惠计算。",
+      "body": "def test_freight_excluded_from_coupon_base() -> None:\n    \"\"\"运费不参与优惠计算。\"\"\"\n    order = _order(subtotal=\"100.00\", freight=\"20.00\")\n    coupon = _coupon(value=Decimal(\"0.9\"), max_discount=Decimal(\"1000.00\"))\n    # 只对 100 的商品小计减免，运费 20 不参与。\n    assert apply_coupon(order, coupon) == Decimal(\"90.00\")",
+      "line_start": 78,
+      "line_end": 83,
+      "source_ref": "demo_app/tests/test_coupon_regression.py:78-83::test_freight_excluded_from_coupon_base"
+    },
+    {
+      "test_id": "demo_app/tests/test_coupon_regression.py::test_not_applicable_error_mentions_coupon_id",
+      "file_path": "demo_app/tests/test_coupon_regression.py",
+      "test_name": "test_not_applicable_error_mentions_coupon_id",
+      "kind": "regression",
+      "module": "demo_app.test_coupon_regression",
+      "docstring": "异常信息包含券编号。",
+      "body": "def test_not_applicable_error_mentions_coupon_id() -> None:\n    \"\"\"异常信息包含券编号。\"\"\"\n    order = _order(subtotal=\"10.00\")\n    with pytest.raises(CouponNotApplicable) as excinfo:\n        apply_coupon(order, _coupon(coupon_id=\"CPN-XYZ\", threshold=Decimal(\"50.00\")))\n    assert \"CPN-XYZ\" in str(excinfo.value)",
+      "line_start": 105,
+      "line_end": 110,
+      "source_ref": "demo_app/tests/test_coupon_regression.py:105-110::test_not_applicable_error_mentions_coupon_id"
+    },
+    {
+      "test_id": "demo_app/tests/test_coupon_regression.py::test_settlement_total_includes_freight",
+      "file_path": "demo_app/tests/test_coupon_regression.py",
+      "test_name": "test_settlement_total_includes_freight",
+      "kind": "regression",
+      "module": "demo_app.test_coupon_regression",
+      "docstring": "应付金额包含运费。",
+      "body": "def test_settlement_total_includes_freight() -> None:\n    \"\"\"应付金额包含运费。\"\"\"\n    order = _order(subtotal=\"100.00\", freight=\"12.50\")\n    coupon = _coupon(value=Decimal(\"0.9\"))\n    result = settle(order, coupon)\n    assert result.subtotal == Decimal(\"100.00\")\n    assert result.discount == Decimal(\"90.00\")\n    assert result.freight == Decimal(\"12.50\")\n    assert result.payable == Decimal(\"22.50\")",
+      "line_start": 86,
+      "line_end": 94,
+      "source_ref": "demo_app/tests/test_coupon_regression.py:86-94::test_settlement_total_includes_freight"
+    }
+  ],
+  "state": null,
+  "retrieval": {
+    "task": "支持无门槛优惠券（coupon.threshold = 0）：无门槛券不做门槛判定即可使用；门槛判定使用 >= 而不是 >；负门槛视为券配置错误。",
+    "hits": [
+      {
+        "doc_type": "code",
+        "ref_id": "demo_app.pricing.Coupon",
+        "title": "demo_app.pricing.Coupon (class)",
+        "module": "demo_app.pricing",
+        "file_path": "demo_app/pricing.py",
+        "line_start": 28,
+        "status": "active",
+        "status_label": "生效中",
+        "score": 0.8998,
+        "reasons": [
+          "倒排索引命中 9 个查询词（得分 50.5）",
+          "seekdb 全文相关度 1.229",
+          "任务文本直接点名 `coupon`"
+        ],
+        "source_ref": "demo_app/pricing.py:28#demo_app.pricing.Coupon",
+        "payload": {
+          "doc_id": "code:demo_app.pricing.Coupon"
+        }
+      },
+      {
+        "doc_type": "code",
+        "ref_id": "demo_app.pricing.apply_coupon",
+        "title": "demo_app.pricing.apply_coupon (function)",
+        "module": "demo_app.pricing",
+        "file_path": "demo_app/pricing.py",
+        "line_start": 61,
+        "status": "active",
+        "status_label": "生效中",
+        "score": 0.8005,
+        "reasons": [
+          "倒排索引命中 7 个查询词（得分 83.7）",
+          "seekdb 全文相关度 2.805"
+        ],
+        "source_ref": "demo_app/pricing.py:61#demo_app.pricing.apply_coupon",
+        "payload": {
+          "doc_id": "code:demo_app.pricing.apply_coupon"
+        }
+      },
+      {
+        "doc_type": "test",
+        "ref_id": "demo_app/tests/test_coupon_threshold.py::test_no_threshold_discount_coupon_is_applicable",
+        "title": "test_no_threshold_discount_coupon_is_applicable",
+        "module": "demo_app.test_coupon_threshold",
+        "file_path": "demo_app/tests/test_coupon_threshold.py",
+        "line_start": 37,
+        "status": "active",
+        "status_label": "生效中",
+        "score": 0.6501,
+        "reasons": [
+          "倒排索引命中 8 个查询词（得分 77.2）",
+          "seekdb 全文相关度 1.352"
+        ],
+        "source_ref": "demo_app/tests/test_coupon_threshold.py:37::demo_app/tests/test_coupon_threshold.py::test_no_threshold_discount_coupon_is_applicable",
+        "payload": {
+          "doc_id": "test:demo_app/tests/test_coupon_threshold.py::test_no_threshold_discount_coupon_is_applicable"
+        }
+      },
+      {
+        "doc_type": "test",
+        "ref_id": "demo_app/tests/test_coupon_threshold.py::test_discount_coupon_applies_at_exact_threshold",
+        "title": "test_discount_coupon_applies_at_exact_threshold",
+        "module": "demo_app.test_coupon_threshold",
+        "file_path": "demo_app/tests/test_coupon_threshold.py",
+        "line_start": 44,
+        "status": "active",
+        "status_label": "生效中",
+        "score": 0.6058,
+        "reasons": [
+          "倒排索引命中 7 个查询词（得分 56.6）",
+          "seekdb 全文相关度 2.800"
+        ],
+        "source_ref": "demo_app/tests/test_coupon_threshold.py:44::demo_app/tests/test_coupon_threshold.py::test_discount_coupon_applies_at_exact_threshold",
+        "payload": {
+          "doc_id": "test:demo_app/tests/test_coupon_threshold.py::test_discount_coupon_applies_at_exact_threshold"
+        }
+      },
+      {
+        "doc_type": "spec",
+        "ref_id": "REQ-CPN-003",
+        "title": "门槛判定使用大于等于",
+        "module": "demo_app.pricing",
+        "file_path": "specs/coupon-rules.md",
+        "line_start": 32,
+        "status": "active",
+        "status_label": "生效中",
+        "score": 0.5953,
+        "reasons": [
+          "倒排索引命中 10 个查询词（得分 41.2）",
+          "seekdb 全文相关度 4.198"
+        ],
+        "source_ref": "specs/coupon-rules.md:32#REQ-CPN-003",
+        "payload": {
+          "doc_id": "spec:REQ-CPN-003"
+        }
+      },
+      {
+        "doc_type": "spec",
+        "ref_id": "REQ-CPN-004",
+        "title": "无门槛券",
+        "module": "demo_app.pricing",
+        "file_path": "specs/coupon-rules.md",
+        "line_start": 42,
+        "status": "active",
+        "status_label": "生效中",
+        "score": 0.5741,
+        "reasons": [
+          "倒排索引命中 11 个查询词（得分 50.4）",
+          "seekdb 全文相关度 2.978"
+        ],
+        "source_ref": "specs/coupon-rules.md:42#REQ-CPN-004",
+        "payload": {
+          "doc_id": "spec:REQ-CPN-004"
+        }
+      },
+      {
+        "doc_type": "spec",
+        "ref_id": "REQ-CPN-008",
+        "title": "负门槛属于券配置错误",
+        "module": "demo_app.pricing",
+        "file_path": "specs/coupon-rules.md",
+        "line_start": 83,
+        "status": "active",
+        "status_label": "生效中",
+        "score": 0.5336,
+        "reasons": [
+          "倒排索引命中 11 个查询词（得分 62.9）",
+          "seekdb 全文相关度 1.158"
+        ],
+        "source_ref": "specs/coupon-rules.md:83#REQ-CPN-008",
+        "payload": {
+          "doc_id": "spec:REQ-CPN-008"
+        }
+      },
+      {
+        "doc_type": "test",
+        "ref_id": "demo_app/tests/test_coupon_regression.py::test_negative_threshold_coupon_is_rejected",
+        "title": "test_negative_threshold_coupon_is_rejected",
+        "module": "demo_app.test_coupon_regression",
+        "file_path": "demo_app/tests/test_coupon_regression.py",
+        "line_start": 113,
+        "status": "active",
+        "status_label": "生效中",
+        "score": 0.4556,
+        "reasons": [
+          "倒排索引命中 10 个查询词（得分 58.4）",
+          "seekdb 全文相关度 0.518"
+        ],
+        "source_ref": "demo_app/tests/test_coupon_regression.py:113::demo_app/tests/test_coupon_regression.py::test_negative_threshold_coupon_is_rejected",
+        "payload": {
+          "doc_id": "test:demo_app/tests/test_coupon_regression.py::test_negative_threshold_coupon_is_rejected"
+        }
+      },
+      {
+        "doc_type": "test",
+        "ref_id": "demo_app/tests/test_coupon_threshold.py::test_no_threshold_coupon_respects_max_discount",
+        "title": "test_no_threshold_coupon_respects_max_discount",
+        "module": "demo_app.test_coupon_threshold",
+        "file_path": "demo_app/tests/test_coupon_threshold.py",
+        "line_start": 51,
+        "status": "active",
+        "status_label": "生效中",
+        "score": 0.4347,
+        "reasons": [
+          "倒排索引命中 6 个查询词（得分 55.2）",
+          "seekdb 全文相关度 0.546"
+        ],
+        "source_ref": "demo_app/tests/test_coupon_threshold.py:51::demo_app/tests/test_coupon_threshold.py::test_no_threshold_coupon_respects_max_discount",
+        "payload": {
+          "doc_id": "test:demo_app/tests/test_coupon_threshold.py::test_no_threshold_coupon_respects_max_discount"
+        }
+      },
+      {
+        "doc_type": "test",
+        "ref_id": "demo_app/tests/test_coupon_threshold.py::test_no_threshold_coupon_base_excludes_freight",
+        "title": "test_no_threshold_coupon_base_excludes_freight",
+        "module": "demo_app.test_coupon_threshold",
+        "file_path": "demo_app/tests/test_coupon_threshold.py",
+        "line_start": 62,
+        "status": "active",
+        "status_label": "生效中",
+        "score": 0.4323,
+        "reasons": [
+          "倒排索引命中 6 个查询词（得分 55.2）",
+          "seekdb 全文相关度 0.512"
+        ],
+        "source_ref": "demo_app/tests/test_coupon_threshold.py:62::demo_app/tests/test_coupon_threshold.py::test_no_threshold_coupon_base_excludes_freight",
+        "payload": {
+          "doc_id": "test:demo_app/tests/test_coupon_threshold.py::test_no_threshold_coupon_base_excludes_freight"
+        }
+      },
+      {
+        "doc_type": "test",
+        "ref_id": "demo_app/tests/test_coupon_threshold.py::test_no_threshold_coupon_in_settlement",
+        "title": "test_no_threshold_coupon_in_settlement",
+        "module": "demo_app.test_coupon_threshold",
+        "file_path": "demo_app/tests/test_coupon_threshold.py",
+        "line_start": 69,
+        "status": "active",
+        "status_label": "生效中",
+        "score": 0.418,
+        "reasons": [
+          "倒排索引命中 6 个查询词（得分 53.2）",
+          "seekdb 全文相关度 0.512"
+        ],
+        "source_ref": "demo_app/tests/test_coupon_threshold.py:69::demo_app/tests/test_coupon_threshold.py::test_no_threshold_coupon_in_settlement",
+        "payload": {
+          "doc_id": "test:demo_app/tests/test_coupon_threshold.py::test_no_threshold_coupon_in_settlement"
+        }
+      },
+      {
+        "doc_type": "spec",
+        "ref_id": "REQ-CPN-006",
+        "title": "运费不参与优惠计算",
+        "module": "demo_app.pricing, demo_app.models",
+        "file_path": "specs/coupon-rules.md",
+        "line_start": 62,
+        "status": "active",
+        "status_label": "生效中",
+        "score": 0.3906,
+        "reasons": [
+          "倒排索引命中 10 个查询词（得分 32.6）",
+          "seekdb 全文相关度 2.196"
+        ],
+        "source_ref": "specs/coupon-rules.md:62#REQ-CPN-006",
+        "payload": {
+          "doc_id": "spec:REQ-CPN-006"
+        }
+      },
+      {
+        "doc_type": "test",
+        "ref_id": "demo_app/tests/test_coupon_regression.py::test_discount_coupon_rejected_when_below_threshold",
+        "title": "test_discount_coupon_rejected_when_below_threshold",
+        "module": "demo_app.test_coupon_regression",
+        "file_path": "demo_app/tests/test_coupon_regression.py",
+        "line_start": 42,
+        "status": "active",
+        "status_label": "生效中",
+        "score": 0.3744,
+        "reasons": [
+          "倒排索引命中 5 个查询词（得分 42.8）",
+          "seekdb 全文相关度 0.946"
+        ],
+        "source_ref": "demo_app/tests/test_coupon_regression.py:42::demo_app/tests/test_coupon_regression.py::test_discount_coupon_rejected_when_below_threshold",
+        "payload": {
+          "doc_id": "test:demo_app/tests/test_coupon_regression.py::test_discount_coupon_rejected_when_below_threshold"
+        }
+      },
+      {
+        "doc_type": "test",
+        "ref_id": "demo_app/tests/test_coupon_regression.py::test_threshold_coupon_reduces_fixed_amount",
+        "title": "test_threshold_coupon_reduces_fixed_amount",
+        "module": "demo_app.test_coupon_regression",
+        "file_path": "demo_app/tests/test_coupon_regression.py",
+        "line_start": 49,
+        "status": "active",
+        "status_label": "生效中",
+        "score": 0.3535,
+        "reasons": [
+          "倒排索引命中 2 个查询词（得分 46.0）",
+          "seekdb 全文相关度 0.332"
+        ],
+        "source_ref": "demo_app/tests/test_coupon_regression.py:49::demo_app/tests/test_coupon_regression.py::test_threshold_coupon_reduces_fixed_amount",
+        "payload": {
+          "doc_id": "test:demo_app/tests/test_coupon_regression.py::test_threshold_coupon_reduces_fixed_amount"
+        }
+      },
+      {
+        "doc_type": "spec",
+        "ref_id": "ADR-006",
+        "title": "无门槛券同样受减免上限与运费隔离约束",
+        "module": "demo_app.pricing",
+        "file_path": "specs/decisions.md",
+        "line_start": 62,
+        "status": "active",
+        "status_label": "生效中",
+        "score": 0.3494,
+        "reasons": [
+          "倒排索引命中 8 个查询词（得分 35.9）",
+          "seekdb 全文相关度 1.288"
+        ],
+        "source_ref": "specs/decisions.md:62#ADR-006",
+        "payload": {
+          "doc_id": "spec:ADR-006"
+        }
+      },
+      {
+        "doc_type": "test",
+        "ref_id": "demo_app/tests/test_coupon_regression.py::test_discount_never_exceeds_subtotal",
+        "title": "test_discount_never_exceeds_subtotal",
+        "module": "demo_app.test_coupon_regression",
+        "file_path": "demo_app/tests/test_coupon_regression.py",
+        "line_start": 67,
+        "status": "active",
+        "status_label": "生效中",
+        "score": 0.3037,
+        "reasons": [
+          "倒排索引命中 3 个查询词（得分 33.6）",
+          "seekdb 全文相关度 0.879"
+        ],
+        "source_ref": "demo_app/tests/test_coupon_regression.py:67::demo_app/tests/test_coupon_regression.py::test_discount_never_exceeds_subtotal",
+        "payload": {
+          "doc_id": "test:demo_app/tests/test_coupon_regression.py::test_discount_never_exceeds_subtotal"
+        }
+      },
+      {
+        "doc_type": "code",
+        "ref_id": "demo_app.pricing.settle",
+        "title": "demo_app.pricing.settle (function)",
+        "module": "demo_app.pricing",
+        "file_path": "demo_app/pricing.py",
+        "line_start": 92,
+        "status": "active",
+        "status_label": "生效中",
+        "score": 0.2951,
+        "reasons": [
+          "倒排索引命中 3 个查询词（得分 32.3）",
+          "seekdb 全文相关度 0.889"
+        ],
+        "source_ref": "demo_app/pricing.py:92#demo_app.pricing.settle",
+        "payload": {
+          "doc_id": "code:demo_app.pricing.settle"
+        }
+      },
+      {
+        "doc_type": "test",
+        "ref_id": "demo_app/tests/test_coupon_regression.py::test_settlement_without_coupon",
+        "title": "test_settlement_without_coupon",
+        "module": "demo_app.test_coupon_regression",
+        "file_path": "demo_app/tests/test_coupon_regression.py",
+        "line_start": 97,
+        "status": "active",
+        "status_label": "生效中",
+        "score": 0.2929,
+        "reasons": [
+          "倒排索引命中 5 个查询词（得分 26.4）",
+          "seekdb 全文相关度 1.450"
+        ],
+        "source_ref": "demo_app/tests/test_coupon_regression.py:97::demo_app/tests/test_coupon_regression.py::test_settlement_without_coupon",
+        "payload": {
+          "doc_id": "test:demo_app/tests/test_coupon_regression.py::test_settlement_without_coupon"
+        }
+      },
+      {
+        "doc_type": "spec",
+        "ref_id": "ADR-004",
+        "title": "折扣券必须配置正门槛",
+        "module": "demo_app.pricing",
+        "file_path": "specs/decisions.md",
+        "line_start": 41,
+        "status": "superseded",
+        "status_label": "已失效",
+        "score": 0.2813,
+        "reasons": [
+          "倒排索引命中 11 个查询词（得分 36.0）",
+          "seekdb 全文相关度 1.025",
+          "条目已失效，仅供追溯"
+        ],
+        "source_ref": "specs/decisions.md:41#ADR-004",
+        "payload": {
+          "doc_id": "spec:ADR-004"
+        }
+      },
+      {
+        "doc_type": "code",
+        "ref_id": "demo_app.pricing.CouponKind",
+        "title": "demo_app.pricing.CouponKind (class)",
+        "module": "demo_app.pricing",
+        "file_path": "demo_app/pricing.py",
+        "line_start": 20,
+        "status": "active",
+        "status_label": "生效中",
+        "score": 0.2628,
+        "reasons": [
+          "倒排索引命中 2 个查询词（得分 34.0）",
+          "seekdb 全文相关度 0.267"
+        ],
+        "source_ref": "demo_app/pricing.py:20#demo_app.pricing.CouponKind",
+        "payload": {
+          "doc_id": "code:demo_app.pricing.CouponKind"
+        }
+      },
+      {
+        "doc_type": "spec",
+        "ref_id": "ADR-003",
+        "title": "折扣券门槛使用严格大于比较",
+        "module": "demo_app.pricing",
+        "file_path": "specs/decisions.md",
+        "line_start": 29,
+        "status": "superseded",
+        "status_label": "已失效",
+        "score": 0.26,
+        "reasons": [
+          "倒排索引命中 7 个查询词（得分 24.4）",
+          "seekdb 全文相关度 1.890",
+          "条目已失效，仅供追溯"
+        ],
+        "source_ref": "specs/decisions.md:29#ADR-003",
+        "payload": {
+          "doc_id": "spec:ADR-003"
+        }
+      },
+      {
+        "doc_type": "test",
+        "ref_id": "demo_app/tests/test_coupon_regression.py::test_discount_coupon_respects_max_discount",
+        "title": "test_discount_coupon_respects_max_discount",
+        "module": "demo_app.test_coupon_regression",
+        "file_path": "demo_app/tests/test_coupon_regression.py",
+        "line_start": 60,
+        "status": "active",
+        "status_label": "生效中",
+        "score": 0.2577,
+        "reasons": [
+          "倒排索引命中 3 个查询词（得分 27.8）",
+          "seekdb 全文相关度 0.818"
+        ],
+        "source_ref": "demo_app/tests/test_coupon_regression.py:60::demo_app/tests/test_coupon_regression.py::test_discount_coupon_respects_max_discount",
+        "payload": {
+          "doc_id": "test:demo_app/tests/test_coupon_regression.py::test_discount_coupon_respects_max_discount"
+        }
+      },
+      {
+        "doc_type": "test",
+        "ref_id": "demo_app/tests/test_coupon_regression.py::test_freight_excluded_from_coupon_base",
+        "title": "test_freight_excluded_from_coupon_base",
+        "module": "demo_app.test_coupon_regression",
+        "file_path": "demo_app/tests/test_coupon_regression.py",
+        "line_start": 78,
+        "status": "active",
+        "status_label": "生效中",
+        "score": 0.2488,
+        "reasons": [
+          "倒排索引命中 3 个查询词（得分 27.8）",
+          "seekdb 全文相关度 0.693"
+        ],
+        "source_ref": "demo_app/tests/test_coupon_regression.py:78::demo_app/tests/test_coupon_regression.py::test_freight_excluded_from_coupon_base",
+        "payload": {
+          "doc_id": "test:demo_app/tests/test_coupon_regression.py::test_freight_excluded_from_coupon_base"
+        }
+      },
+      {
+        "doc_type": "spec",
+        "ref_id": "ADR-002",
+        "title": "运费不参与优惠计算",
+        "module": "demo_app.pricing",
+        "file_path": "specs/decisions.md",
+        "line_start": 20,
+        "status": "active",
+        "status_label": "生效中",
+        "score": 0.2292,
+        "reasons": [
+          "倒排索引命中 6 个查询词（得分 9.8）",
+          "seekdb 全文相关度 2.225"
+        ],
+        "source_ref": "specs/decisions.md:20#ADR-002",
+        "payload": {
+          "doc_id": "spec:ADR-002"
+        }
+      },
+      {
+        "doc_type": "test",
+        "ref_id": "demo_app/tests/test_coupon_regression.py::test_not_applicable_error_mentions_coupon_id",
+        "title": "test_not_applicable_error_mentions_coupon_id",
+        "module": "demo_app.test_coupon_regression",
+        "file_path": "demo_app/tests/test_coupon_regression.py",
+        "line_start": 105,
+        "status": "active",
+        "status_label": "生效中",
+        "score": 0.2162,
+        "reasons": [
+          "倒排索引命中 2 个查询词（得分 28.0）",
+          "seekdb 全文相关度 0.217"
+        ],
+        "source_ref": "demo_app/tests/test_coupon_regression.py:105::demo_app/tests/test_coupon_regression.py::test_not_applicable_error_mentions_coupon_id",
+        "payload": {
+          "doc_id": "test:demo_app/tests/test_coupon_regression.py::test_not_applicable_error_mentions_coupon_id"
+        }
+      },
+      {
+        "doc_type": "spec",
+        "ref_id": "REQ-CPN-001",
+        "title": "满减券按固定金额减免",
+        "module": "demo_app.pricing",
+        "file_path": "specs/coupon-rules.md",
+        "line_start": 12,
+        "status": "active",
+        "status_label": "生效中",
+        "score": 0.2035,
+        "reasons": [
+          "倒排索引命中 4 个查询词（得分 21.6）",
+          "seekdb 全文相关度 0.681"
+        ],
+        "source_ref": "specs/coupon-rules.md:12#REQ-CPN-001",
+        "payload": {
+          "doc_id": "spec:REQ-CPN-001"
+        }
+      },
+      {
+        "doc_type": "code",
+        "ref_id": "demo_app.pricing.CouponNotApplicable",
+        "title": "demo_app.pricing.CouponNotApplicable (class)",
+        "module": "demo_app.pricing",
+        "file_path": "demo_app/pricing.py",
+        "line_start": 16,
+        "status": "active",
+        "status_label": "生效中",
+        "score": 0.1706,
+        "reasons": [
+          "倒排索引命中 4 个查询词（得分 23.8）"
+        ],
+        "source_ref": "demo_app/pricing.py:16#demo_app.pricing.CouponNotApplicable",
+        "payload": {
+          "doc_id": "code:demo_app.pricing.CouponNotApplicable"
+        }
+      },
+      {
+        "doc_type": "spec",
+        "ref_id": "REQ-API-004",
+        "title": "券不适用时抛出 CouponNotApplicable",
+        "module": "demo_app.pricing",
+        "file_path": "specs/order-settlement-api.md",
+        "line_start": 39,
+        "status": "active",
+        "status_label": "生效中",
+        "score": 0.1558,
+        "reasons": [
+          "倒排索引命中 3 个查询词（得分 18.6）",
+          "seekdb 全文相关度 0.315"
+        ],
+        "source_ref": "specs/order-settlement-api.md:39#REQ-API-004",
+        "payload": {
+          "doc_id": "spec:REQ-API-004"
+        }
+      },
+      {
+        "doc_type": "spec",
+        "ref_id": "REQ-CPN-005",
+        "title": "优惠金额上限",
+        "module": "demo_app.pricing",
+        "file_path": "specs/coupon-rules.md",
+        "line_start": 53,
+        "status": "active",
+        "status_label": "生效中",
+        "score": 0.1452,
+        "reasons": [
+          "倒排索引命中 2 个查询词（得分 9.9）",
+          "seekdb 全文相关度 1.039"
+        ],
+        "source_ref": "specs/coupon-rules.md:53#REQ-CPN-005",
+        "payload": {
+          "doc_id": "spec:REQ-CPN-005"
+        }
+      },
+      {
+        "doc_type": "test",
+        "ref_id": "demo_app/tests/test_coupon_regression.py::test_settlement_total_includes_freight",
+        "title": "test_settlement_total_includes_freight",
+        "module": "demo_app.test_coupon_regression",
+        "file_path": "demo_app/tests/test_coupon_regression.py",
+        "line_start": 86,
+        "status": "active",
+        "status_label": "生效中",
+        "score": 0.1386,
+        "reasons": [
+          "倒排索引命中 2 个查询词（得分 17.2）",
+          "seekdb 全文相关度 0.214"
+        ],
+        "source_ref": "demo_app/tests/test_coupon_regression.py:86::demo_app/tests/test_coupon_regression.py::test_settlement_total_includes_freight",
+        "payload": {
+          "doc_id": "test:demo_app/tests/test_coupon_regression.py::test_settlement_total_includes_freight"
+        }
+      },
+      {
+        "doc_type": "spec",
+        "ref_id": "REQ-CPN-002",
+        "title": "折扣券按比例减免",
+        "module": "demo_app.pricing",
+        "file_path": "specs/coupon-rules.md",
+        "line_start": 22,
+        "status": "active",
+        "status_label": "生效中",
+        "score": 0.1382,
+        "reasons": [
+          "倒排索引命中 4 个查询词（得分 13.8）",
+          "seekdb 全文相关度 0.549"
+        ],
+        "source_ref": "specs/coupon-rules.md:22#REQ-CPN-002",
+        "payload": {
+          "doc_id": "spec:REQ-CPN-002"
+        }
+      },
+      {
+        "doc_type": "spec",
+        "ref_id": "REQ-API-003",
+        "title": "无优惠券时的结算",
+        "module": "demo_app.pricing",
+        "file_path": "specs/order-settlement-api.md",
+        "line_start": 30,
+        "status": "active",
+        "status_label": "生效中",
+        "score": 0.1297,
+        "reasons": [
+          "倒排索引命中 3 个查询词（得分 8.9）",
+          "seekdb 全文相关度 0.922"
+        ],
+        "source_ref": "specs/order-settlement-api.md:30#REQ-API-003",
+        "payload": {
+          "doc_id": "spec:REQ-API-003"
+        }
+      },
+      {
+        "doc_type": "code",
+        "ref_id": "demo_app.models.Order",
+        "title": "demo_app.models.Order (class)",
+        "module": "demo_app.models",
+        "file_path": "demo_app/models.py",
+        "line_start": 28,
+        "status": "active",
+        "status_label": "生效中",
+        "score": 0.12,
+        "reasons": [
+          "倒排索引命中 2 个查询词（得分 7.4）",
+          "seekdb 全文相关度 0.937"
+        ],
+        "source_ref": "demo_app/models.py:28#demo_app.models.Order",
+        "payload": {
+          "doc_id": "code:demo_app.models.Order"
+        }
+      },
+      {
+        "doc_type": "spec",
+        "ref_id": "ADR-001",
+        "title": "金额一律使用 Decimal",
+        "module": "demo_app.pricing, demo_app.models",
+        "file_path": "specs/decisions.md",
+        "line_start": 11,
+        "status": "active",
+        "status_label": "生效中",
+        "score": 0.0731,
+        "reasons": [
+          "倒排索引命中 2 个查询词（得分 4.6）",
+          "seekdb 全文相关度 0.562"
+        ],
+        "source_ref": "specs/decisions.md:11#ADR-001",
+        "payload": {
+          "doc_id": "spec:ADR-001"
+        }
+      },
+      {
+        "doc_type": "spec",
+        "ref_id": "REQ-API-002",
+        "title": "应付金额包含运费",
+        "module": "demo_app.pricing",
+        "file_path": "specs/order-settlement-api.md",
+        "line_start": 21,
+        "status": "active",
+        "status_label": "生效中",
+        "score": 0.07,
+        "reasons": [
+          "倒排索引命中 1 个查询词（得分 2.6）",
+          "seekdb 全文相关度 0.719"
+        ],
+        "source_ref": "specs/order-settlement-api.md:21#REQ-API-002",
+        "payload": {
+          "doc_id": "spec:REQ-API-002"
+        }
+      },
+      {
+        "doc_type": "spec",
+        "ref_id": "REQ-API-005",
+        "title": "结算入口不接受原始字典",
+        "module": "demo_app.pricing",
+        "file_path": "specs/order-settlement-api.md",
+        "line_start": 48,
+        "status": "active",
+        "status_label": "生效中",
+        "score": 0.067,
+        "reasons": [
+          "倒排索引命中 1 个查询词（得分 8.0）",
+          "seekdb 全文相关度 0.134"
+        ],
+        "source_ref": "specs/order-settlement-api.md:48#REQ-API-005",
+        "payload": {
+          "doc_id": "spec:REQ-API-005"
+        }
+      },
+      {
+        "doc_type": "spec",
+        "ref_id": "ADR-005",
+        "title": "优惠金额不得超过商品金额",
+        "module": "demo_app.pricing",
+        "file_path": "specs/decisions.md",
+        "line_start": 53,
+        "status": "active",
+        "status_label": "生效中",
+        "score": 0.0558,
+        "reasons": [
+          "倒排索引命中 2 个查询词（得分 3.3）",
+          "seekdb 全文相关度 0.449"
+        ],
+        "source_ref": "specs/decisions.md:53#ADR-005",
+        "payload": {
+          "doc_id": "spec:ADR-005"
+        }
+      }
+    ],
+    "diagnostics": {
+      "candidates": 41,
+      "query_tokens": 37,
+      "token_index_hits": 41,
+      "fts_hits": 39,
+      "fts_enabled": true,
+      "top_weights": [
+        [
+          "coupon.threshold",
+          3.0
+        ],
+        [
+          "threshold",
+          3.0
+        ],
+        [
+          "无门槛券不做门槛判定即可使用",
+          3.0
+        ],
+        [
+          "负门槛视为券配置错误",
+          3.0
+        ],
+        [
+          "支持无门槛优惠券",
+          2.8
+        ],
+        [
+          "门槛判定使用",
+          2.3
+        ],
+        [
+          "coupon",
+          2.0
+        ],
+        [
+          "而不是",
+          1.55
+        ],
+        [
+          "支持",
+          1.3
+        ],
+        [
+          "持无",
+          1.3
+        ],
+        [
+          "无门",
+          1.3
+        ],
+        [
+          "门槛",
+          1.3
+        ]
+      ],
+      "selected": 37
+    }
+  }
+}

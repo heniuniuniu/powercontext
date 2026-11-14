@@ -1,0 +1,16 @@
+--- a/demo_app/pricing.py
++++ b/demo_app/pricing.py
+@@ -72,11 +72,11 @@
+         CouponNotApplicable: 订单不满足该券的使用条件。
+     """
+     subtotal = order.subtotal
+-    if coupon.threshold <= 0:
++    if coupon.threshold < 0:
+         raise CouponNotApplicable(
+             f"coupon {coupon.coupon_id} requires a positive threshold"
+         )
+-    if subtotal <= coupon.threshold:
++    if coupon.threshold > 0 and subtotal < coupon.threshold:
+         raise CouponNotApplicable(
+             f"coupon {coupon.coupon_id} requires subtotal >= {coupon.threshold}"
+         )

@@ -1,0 +1,308 @@
+{
+  "run_id": "20261114-100343-91dc76",
+  "finished_at": "2026-11-14T10:03:44",
+  "sources": {
+    "specs": [
+      "C:\\Users\\NUDTer\\.minimax\\sessions\\mvs_9dddd53bc8a94bb18f40f55ecbc587ca\\workspace\\powercontext\\minimax\\specs\\coupon-rules.md",
+      "C:\\Users\\NUDTer\\.minimax\\sessions\\mvs_9dddd53bc8a94bb18f40f55ecbc587ca\\workspace\\powercontext\\minimax\\specs\\decisions.md",
+      "C:\\Users\\NUDTer\\.minimax\\sessions\\mvs_9dddd53bc8a94bb18f40f55ecbc587ca\\workspace\\powercontext\\minimax\\specs\\order-settlement-api.md"
+    ],
+    "code": [
+      "C:\\Users\\NUDTer\\.minimax\\sessions\\mvs_9dddd53bc8a94bb18f40f55ecbc587ca\\workspace\\powercontext\\minimax\\demo_app\\__init__.py",
+      "C:\\Users\\NUDTer\\.minimax\\sessions\\mvs_9dddd53bc8a94bb18f40f55ecbc587ca\\workspace\\powercontext\\minimax\\demo_app\\models.py",
+      "C:\\Users\\NUDTer\\.minimax\\sessions\\mvs_9dddd53bc8a94bb18f40f55ecbc587ca\\workspace\\powercontext\\minimax\\demo_app\\pricing.py"
+    ],
+    "tests": [
+      "C:\\Users\\NUDTer\\.minimax\\sessions\\mvs_9dddd53bc8a94bb18f40f55ecbc587ca\\workspace\\powercontext\\minimax\\demo_app\\tests\\test_coupon_regression.py",
+      "C:\\Users\\NUDTer\\.minimax\\sessions\\mvs_9dddd53bc8a94bb18f40f55ecbc587ca\\workspace\\powercontext\\minimax\\demo_app\\tests\\test_coupon_threshold.py"
+    ]
+  },
+  "counts": {
+    "spec": 19,
+    "code": 11,
+    "test": 14
+  },
+  "actions": [
+    {
+      "doc_id": "REQ-CPN-001",
+      "action": "unchanged",
+      "doc_type": "spec",
+      "source_file": "specs/coupon-rules.md"
+    },
+    {
+      "doc_id": "REQ-CPN-002",
+      "action": "unchanged",
+      "doc_type": "spec",
+      "source_file": "specs/coupon-rules.md"
+    },
+    {
+      "doc_id": "REQ-CPN-003",
+      "action": "unchanged",
+      "doc_type": "spec",
+      "source_file": "specs/coupon-rules.md"
+    },
+    {
+      "doc_id": "REQ-CPN-004",
+      "action": "unchanged",
+      "doc_type": "spec",
+      "source_file": "specs/coupon-rules.md"
+    },
+    {
+      "doc_id": "REQ-CPN-005",
+      "action": "unchanged",
+      "doc_type": "spec",
+      "source_file": "specs/coupon-rules.md"
+    },
+    {
+      "doc_id": "REQ-CPN-006",
+      "action": "unchanged",
+      "doc_type": "spec",
+      "source_file": "specs/coupon-rules.md"
+    },
+    {
+      "doc_id": "REQ-CPN-007",
+      "action": "unchanged",
+      "doc_type": "spec",
+      "source_file": "specs/coupon-rules.md"
+    },
+    {
+      "doc_id": "REQ-CPN-008",
+      "action": "unchanged",
+      "doc_type": "spec",
+      "source_file": "specs/coupon-rules.md"
+    },
+    {
+      "doc_id": "ADR-001",
+      "action": "unchanged",
+      "doc_type": "spec",
+      "source_file": "specs/decisions.md"
+    },
+    {
+      "doc_id": "ADR-002",
+      "action": "unchanged",
+      "doc_type": "spec",
+      "source_file": "specs/decisions.md"
+    },
+    {
+      "doc_id": "ADR-003",
+      "action": "unchanged",
+      "doc_type": "spec",
+      "source_file": "specs/decisions.md"
+    },
+    {
+      "doc_id": "ADR-004",
+      "action": "unchanged",
+      "doc_type": "spec",
+      "source_file": "specs/decisions.md"
+    },
+    {
+      "doc_id": "ADR-005",
+      "action": "unchanged",
+      "doc_type": "spec",
+      "source_file": "specs/decisions.md"
+    },
+    {
+      "doc_id": "ADR-006",
+      "action": "unchanged",
+      "doc_type": "spec",
+      "source_file": "specs/decisions.md"
+    },
+    {
+      "doc_id": "REQ-API-001",
+      "action": "unchanged",
+      "doc_type": "spec",
+      "source_file": "specs/order-settlement-api.md"
+    },
+    {
+      "doc_id": "REQ-API-002",
+      "action": "unchanged",
+      "doc_type": "spec",
+      "source_file": "specs/order-settlement-api.md"
+    },
+    {
+      "doc_id": "REQ-API-003",
+      "action": "unchanged",
+      "doc_type": "spec",
+      "source_file": "specs/order-settlement-api.md"
+    },
+    {
+      "doc_id": "REQ-API-004",
+      "action": "unchanged",
+      "doc_type": "spec",
+      "source_file": "specs/order-settlement-api.md"
+    },
+    {
+      "doc_id": "REQ-API-005",
+      "action": "unchanged",
+      "doc_type": "spec",
+      "source_file": "specs/order-settlement-api.md"
+    },
+    {
+      "doc_id": "demo_app.models.LineItem",
+      "action": "unchanged",
+      "doc_type": "code",
+      "source_file": "demo_app/models.py"
+    },
+    {
+      "doc_id": "demo_app.models.LineItem.line_total",
+      "action": "unchanged",
+      "doc_type": "code",
+      "source_file": "demo_app/models.py"
+    },
+    {
+      "doc_id": "demo_app.models.Order",
+      "action": "unchanged",
+      "doc_type": "code",
+      "source_file": "demo_app/models.py"
+    },
+    {
+      "doc_id": "demo_app.models.Order.subtotal",
+      "action": "unchanged",
+      "doc_type": "code",
+      "source_file": "demo_app/models.py"
+    },
+    {
+      "doc_id": "demo_app.pricing.CouponNotApplicable",
+      "action": "unchanged",
+      "doc_type": "code",
+      "source_file": "demo_app/pricing.py"
+    },
+    {
+      "doc_id": "demo_app.pricing.CouponKind",
+      "action": "unchanged",
+      "doc_type": "code",
+      "source_file": "demo_app/pricing.py"
+    },
+    {
+      "doc_id": "demo_app.pricing.Coupon",
+      "action": "unchanged",
+      "doc_type": "code",
+      "source_file": "demo_app/pricing.py"
+    },
+    {
+      "doc_id": "demo_app.pricing.SettlementResult",
+      "action": "unchanged",
+      "doc_type": "code",
+      "source_file": "demo_app/pricing.py"
+    },
+    {
+      "doc_id": "demo_app.pricing._round_money",
+      "action": "unchanged",
+      "doc_type": "code",
+      "source_file": "demo_app/pricing.py"
+    },
+    {
+      "doc_id": "demo_app.pricing.apply_coupon",
+      "action": "unchanged",
+      "doc_type": "code",
+      "source_file": "demo_app/pricing.py"
+    },
+    {
+      "doc_id": "demo_app.pricing.settle",
+      "action": "unchanged",
+      "doc_type": "code",
+      "source_file": "demo_app/pricing.py"
+    },
+    {
+      "doc_id": "demo_app/tests/test_coupon_regression.py::test_discount_coupon_rejected_when_below_threshold",
+      "action": "unchanged",
+      "doc_type": "test",
+      "source_file": "demo_app/tests/test_coupon_regression.py"
+    },
+    {
+      "doc_id": "demo_app/tests/test_coupon_regression.py::test_threshold_coupon_reduces_fixed_amount",
+      "action": "unchanged",
+      "doc_type": "test",
+      "source_file": "demo_app/tests/test_coupon_regression.py"
+    },
+    {
+      "doc_id": "demo_app/tests/test_coupon_regression.py::test_discount_coupon_respects_max_discount",
+      "action": "unchanged",
+      "doc_type": "test",
+      "source_file": "demo_app/tests/test_coupon_regression.py"
+    },
+    {
+      "doc_id": "demo_app/tests/test_coupon_regression.py::test_discount_never_exceeds_subtotal",
+      "action": "unchanged",
+      "doc_type": "test",
+      "source_file": "demo_app/tests/test_coupon_regression.py"
+    },
+    {
+      "doc_id": "demo_app/tests/test_coupon_regression.py::test_freight_excluded_from_coupon_base",
+      "action": "unchanged",
+      "doc_type": "test",
+      "source_file": "demo_app/tests/test_coupon_regression.py"
+    },
+    {
+      "doc_id": "demo_app/tests/test_coupon_regression.py::test_settlement_total_includes_freight",
+      "action": "unchanged",
+      "doc_type": "test",
+      "source_file": "demo_app/tests/test_coupon_regression.py"
+    },
+    {
+      "doc_id": "demo_app/tests/test_coupon_regression.py::test_settlement_without_coupon",
+      "action": "unchanged",
+      "doc_type": "test",
+      "source_file": "demo_app/tests/test_coupon_regression.py"
+    },
+    {
+      "doc_id": "demo_app/tests/test_coupon_regression.py::test_not_applicable_error_mentions_coupon_id",
+      "action": "unchanged",
+      "doc_type": "test",
+      "source_file": "demo_app/tests/test_coupon_regression.py"
+    },
+    {
+      "doc_id": "demo_app/tests/test_coupon_regression.py::test_negative_threshold_coupon_is_rejected",
+      "action": "unchanged",
+      "doc_type": "test",
+      "source_file": "demo_app/tests/test_coupon_regression.py"
+    },
+    {
+      "doc_id": "demo_app/tests/test_coupon_threshold.py::test_no_threshold_discount_coupon_is_applicable",
+      "action": "unchanged",
+      "doc_type": "test",
+      "source_file": "demo_app/tests/test_coupon_threshold.py"
+    },
+    {
+      "doc_id": "demo_app/tests/test_coupon_threshold.py::test_discount_coupon_applies_at_exact_threshold",
+      "action": "unchanged",
+      "doc_type": "test",
+      "source_file": "demo_app/tests/test_coupon_threshold.py"
+    },
+    {
+      "doc_id": "demo_app/tests/test_coupon_threshold.py::test_no_threshold_coupon_respects_max_discount",
+      "action": "unchanged",
+      "doc_type": "test",
+      "source_file": "demo_app/tests/test_coupon_threshold.py"
+    },
+    {
+      "doc_id": "demo_app/tests/test_coupon_threshold.py::test_no_threshold_coupon_base_excludes_freight",
+      "action": "unchanged",
+      "doc_type": "test",
+      "source_file": "demo_app/tests/test_coupon_threshold.py"
+    },
+    {
+      "doc_id": "demo_app/tests/test_coupon_threshold.py::test_no_threshold_coupon_in_settlement",
+      "action": "unchanged",
+      "doc_type": "test",
+      "source_file": "demo_app/tests/test_coupon_threshold.py"
+    }
+  ],
+  "changed": [],
+  "table_stats": {
+    "spec_item": 19,
+    "code_symbol": 11,
+    "test_case": 14,
+    "doc_index": 44,
+    "doc_token": 2198,
+    "ingest_run": 307
+  },
+  "database": {
+    "mode": "embedded",
+    "version": "5.7.25-OceanBase seekdb-v1.4.0.0",
+    "database": "sddctx",
+    "schema_version": "1",
+    "fts": true,
+    "fts_error": null
+  }
+}
