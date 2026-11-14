@@ -1,0 +1,20 @@
+# sddctx 上下文模块运行依赖
+#
+# 安装：
+#   python -m venv .venv
+#   .venv/bin/pip install -r requirements.txt      (Linux/macOS)
+#   .venv\Scripts\pip install -r requirements.txt  (Windows)
+#
+# 说明：
+# * pylibseekdb 提供**嵌入式 seekdb**（OceanBase seekdb v1.4.0），Windows / Linux / macOS
+#   均有官方 wheel。若 pip 解析缓慢，可加 --no-cache-dir 或先单独安装该 wheel。
+# * powercontext 提供本地 Server 与 Python Client SDK，用于保存/复用任务状态。
+# * typer 是 powercontext CLI（powercontext server run）所需。
+
+pylibseekdb==1.4.0.post2
+pymysql>=1.1.1
+httpx>=0.28
+pyyaml>=6
+powercontext[client,server]==1.5.1
+typer>=0.16
+pytest>=8

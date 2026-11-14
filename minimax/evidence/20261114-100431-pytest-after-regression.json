@@ -1,0 +1,10 @@
+{
+  "label": "after-regression",
+  "command": "C:\\Users\\NUDTer\\.minimax\\sessions\\mvs_9dddd53bc8a94bb18f40f55ecbc587ca\\workspace\\.venv\\Scripts\\python.exe -m pytest demo_app/tests/test_coupon_regression.py -v --no-header -p no:cacheprovider",
+  "cwd": "C:\\Users\\NUDTer\\.minimax\\sessions\\mvs_9dddd53bc8a94bb18f40f55ecbc587ca\\workspace\\powercontext\\minimax",
+  "started_at": "2026-11-14T10:04:29",
+  "finished_at": "2026-11-14T10:04:31",
+  "exit_code": 0,
+  "stdout": "============================= test session starts =============================\ncollecting ... collected 9 items\n\ndemo_app/tests/test_coupon_regression.py::test_discount_coupon_rejected_when_below_threshold PASSED [ 11%]\ndemo_app/tests/test_coupon_regression.py::test_threshold_coupon_reduces_fixed_amount PASSED [ 22%]\ndemo_app/tests/test_coupon_regression.py::test_discount_coupon_respects_max_discount PASSED [ 33%]\ndemo_app/tests/test_coupon_regression.py::test_discount_never_exceeds_subtotal PASSED [ 44%]\ndemo_app/tests/test_coupon_regression.py::test_freight_excluded_from_coupon_base PASSED [ 55%]\ndemo_app/tests/test_coupon_regression.py::test_settlement_total_includes_freight PASSED [ 66%]\ndemo_app/tests/test_coupon_regression.py::test_settlement_without_coupon PASSED [ 77%]\ndemo_app/tests/test_coupon_regression.py::test_not_applicable_error_mentions_coupon_id PASSED [ 88%]\ndemo_app/tests/test_coupon_regression.py::test_negative_threshold_coupon_is_rejected PASSED [100%]\n\n============================== 9 passed in 0.05s ==============================\n",
+  "stderr": ""
+}

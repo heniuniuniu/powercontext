@@ -1,0 +1,70 @@
+{
+  "label": "before",
+  "task": "支持无门槛优惠券（coupon.threshold = 0）：无门槛券不做门槛判定即可使用；门槛判定使用 >= 而不是 >；负门槛视为券配置错误。",
+  "exit_code": 0,
+  "spec_ids": [
+    "REQ-CPN-003",
+    "REQ-CPN-004",
+    "REQ-CPN-008",
+    "REQ-CPN-006",
+    "ADR-002",
+    "REQ-CPN-001",
+    "REQ-API-004",
+    "REQ-CPN-005",
+    "REQ-API-003",
+    "REQ-CPN-002",
+    "REQ-API-002",
+    "ADR-001"
+  ],
+  "retired_spec_ids": [
+    "ADR-004",
+    "ADR-003"
+  ],
+  "watched": {
+    "REQ-CPN-003": {
+      "present": true,
+      "partition": "specs",
+      "title": "门槛判定使用大于等于",
+      "status": "active",
+      "content_sha256": "3c6ce96a3fff17ec0544cd3bebccc848ab0b7cb728f5777b6cc4fd462e037bb5",
+      "source_ref": "specs/coupon-rules.md:32#REQ-CPN-003",
+      "body": "订单**商品小计大于或等于**券门槛时，券即可使用；恰好等于门槛的订单同样可以使用。\n门槛判定只针对 `threshold > 0` 的券。"
+    },
+    "REQ-CPN-004": {
+      "present": true,
+      "partition": "specs",
+      "title": "无门槛券",
+      "status": "active",
+      "content_sha256": "272be2df04884b2b0f18f0229c8306596136b00c0dc5af4a59e44b7867c6b8ff",
+      "source_ref": "specs/coupon-rules.md:42#REQ-CPN-004",
+      "body": "券的 `threshold` 为 0 表示**无门槛券**：不做任何门槛判定，任意非空订单都可以使用，\n其余规则（减免计算、上限、运费隔离）照常生效。"
+    },
+    "REQ-CPN-006": {
+      "present": true,
+      "partition": "specs",
+      "title": "运费不参与优惠计算",
+      "status": "active",
+      "content_sha256": "d92d84ae7ccde53099ad9008bb171ef4220d57790ed9fa80226c2df6c76c8df2",
+      "source_ref": "specs/coupon-rules.md:61#REQ-CPN-006",
+      "body": "门槛判定与优惠金额计算都只使用订单**商品小计**，运费不计入优惠基数。"
+    },
+    "REQ-CPN-008": {
+      "present": true,
+      "partition": "specs",
+      "title": "负门槛属于券配置错误",
+      "status": "active",
+      "content_sha256": "7f53496662310f1920de6cab3fa5bd747e1bd776d124b3d3d2208b7ebb88bbbe",
+      "source_ref": "specs/coupon-rules.md:80#REQ-CPN-008",
+      "body": "券的 `threshold` 为负数属于**券配置错误**，`apply_coupon` 必须抛出\n`CouponNotApplicable`（与引入无门槛券之前的既有行为保持一致）。\n只有 `threshold == 0`（无门槛）与 `threshold > 0`（有门槛）两种取值是合法的。"
+    },
+    "ADR-006": {
+      "present": false,
+      "partition": null,
+      "title": null,
+      "status": null,
+      "content_sha256": null,
+      "source_ref": null,
+      "body": null
+    }
+  }
+}

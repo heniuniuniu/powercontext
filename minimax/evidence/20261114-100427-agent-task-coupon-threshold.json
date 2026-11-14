@@ -1,0 +1,162 @@
+{
+  "task_id": "task-coupon-threshold",
+  "task": "支持无门槛优惠券（coupon.threshold = 0）：无门槛券不做门槛判定即可使用；并且订单商品金额恰好等于券门槛时，折扣券也应当可以使用（门槛判定使用 >= 而不是 >）。请只修改 demo_app/pricing.py 中 apply_coupon 的门槛判定逻辑，不要改变满减券/折扣券的减免计算、上限封顶、运费隔离与金额精度等既有行为。",
+  "started_at": "2026-11-14T10:04:08",
+  "context_summary": {
+    "task": "支持无门槛优惠券（coupon.threshold = 0）：无门槛券不做门槛判定即可使用；并且订单商品金额恰好等于券门槛时，折扣券也应当可以使用（门槛判定使用 >= 而不是 >）。请只修改 demo_app/pricing.py 中 apply_coupon 的门槛判定逻辑，不要改变满减券/折扣券的减免计算、上限封顶、运费隔离与金额精度等既有行为。",
+    "generated_at": "2026-11-14T10:04:14",
+    "spec_count": 12,
+    "retired_spec_count": 2,
+    "code_count": 9,
+    "target_test_count": 5,
+    "regression_test_count": 9,
+    "spec_ids": [
+      "REQ-CPN-004",
+      "REQ-CPN-008",
+      "REQ-CPN-003",
+      "REQ-CPN-006",
+      "ADR-006",
+      "REQ-CPN-001",
+      "REQ-CPN-005",
+      "REQ-CPN-002",
+      "ADR-005",
+      "ADR-002",
+      "REQ-API-004",
+      "REQ-API-003"
+    ],
+    "retired_spec_ids": [
+      "ADR-004",
+      "ADR-003"
+    ],
+    "symbols": [
+      "demo_app.pricing.apply_coupon",
+      "demo_app.pricing.Coupon",
+      "demo_app.pricing.settle",
+      "demo_app.pricing.CouponKind",
+      "demo_app.models.Order",
+      "demo_app.pricing.CouponNotApplicable",
+      "demo_app.models.Order.subtotal",
+      "demo_app.pricing._round_money",
+      "demo_app.pricing.SettlementResult"
+    ],
+    "target_tests": [
+      "test_no_threshold_discount_coupon_is_applicable",
+      "test_discount_coupon_applies_at_exact_threshold",
+      "test_no_threshold_coupon_base_excludes_freight",
+      "test_no_threshold_coupon_respects_max_discount",
+      "test_no_threshold_coupon_in_settlement"
+    ],
+    "regression_tests": [
+      "test_threshold_coupon_reduces_fixed_amount",
+      "test_discount_never_exceeds_subtotal",
+      "test_discount_coupon_rejected_when_below_threshold",
+      "test_negative_threshold_coupon_is_rejected",
+      "test_discount_coupon_respects_max_discount",
+      "test_settlement_without_coupon",
+      "test_freight_excluded_from_coupon_base",
+      "test_not_applicable_error_mentions_coupon_id",
+      "test_settlement_total_includes_freight"
+    ],
+    "has_state": true
+  },
+  "database": {
+    "mode": "embedded",
+    "version": "5.7.25-OceanBase seekdb-v1.4.0.0",
+    "database": "sddctx",
+    "schema_version": "1",
+    "fts": true,
+    "fts_error": null
+  },
+  "context_file": "C:\\Users\\NUDTer\\.minimax\\sessions\\mvs_9dddd53bc8a94bb18f40f55ecbc587ca\\workspace\\powercontext\\minimax\\evidence\\context-latest.md",
+  "state_before": {
+    "seq": 2,
+    "scope_id": "scp_2s0282qdy9j7c1k8f55h701x92",
+    "kind": "sdd-task-state",
+    "citation": null,
+    "entry_id": null,
+    "task_id": "task-coupon-threshold",
+    "server": "http://127.0.0.1:8000",
+    "logical_scope": "project:sddctx-demo"
+  },
+  "minimax": {
+    "model": "MiniMax-M3.1-Flash",
+    "http_status": 200,
+    "usage": {
+      "input_tokens": 1,
+      "output_tokens": 887,
+      "cache_creation_input_tokens": 0,
+      "cache_read_input_tokens": 3665,
+      "output_tokens_details": {
+        "thinking_tokens": 643
+      }
+    },
+    "endpoint": "https://agent.minimax.cn/mavis/api/v1/llm/v1/messages"
+  },
+  "model_patches": [
+    {
+      "file": "demo_app/pricing.py",
+      "function": "apply_coupon"
+    }
+  ],
+  "patch_mode": "function-splice",
+  "changes": [
+    {
+      "path": "demo_app/pricing.py",
+      "changed": true,
+      "mode": "function-splice",
+      "functions": [
+        "apply_coupon"
+      ],
+      "added_lines": 2,
+      "removed_lines": 2,
+      "unchanged_bytes": 2859,
+      "diff": "--- a/demo_app/pricing.py\n+++ b/demo_app/pricing.py\n@@ -72,11 +72,11 @@\n         CouponNotApplicable: 订单不满足该券的使用条件。\n     \"\"\"\n     subtotal = order.subtotal\n-    if coupon.threshold <= 0:\n+    if coupon.threshold < 0:\n         raise CouponNotApplicable(\n             f\"coupon {coupon.coupon_id} requires a positive threshold\"\n         )\n-    if subtotal <= coupon.threshold:\n+    if coupon.threshold > 0 and subtotal < coupon.threshold:\n         raise CouponNotApplicable(\n             f\"coupon {coupon.coupon_id} requires subtotal >= {coupon.threshold}\"\n         )\n",
+      "function_diffs": [
+        {
+          "function": "apply_coupon",
+          "original_line_range": [
+            61,
+            89
+          ],
+          "added_lines": 2,
+          "removed_lines": 2,
+          "diff": "--- a/apply_coupon\n+++ b/apply_coupon\n@@ -72,11 +72,11 @@\n         CouponNotApplicable: 订单不满足该券的使用条件。\n     \"\"\"\n     subtotal = order.subtotal\n-    if coupon.threshold <= 0:\n+    if coupon.threshold < 0:\n         raise CouponNotApplicable(\n             f\"coupon {coupon.coupon_id} requires a positive threshold\"\n         )\n-    if subtotal <= coupon.threshold:\n+    if coupon.threshold > 0 and subtotal < coupon.threshold:\n         raise CouponNotApplicable(\n             f\"coupon {coupon.coupon_id} requires subtotal >= {coupon.threshold}\"\n         )\n"
+        }
+      ]
+    }
+  ],
+  "tests": {
+    "target": {
+      "label": "target",
+      "command": "C:\\Users\\NUDTer\\.minimax\\sessions\\mvs_9dddd53bc8a94bb18f40f55ecbc587ca\\workspace\\.venv\\Scripts\\python.exe -m pytest demo_app\\tests\\test_coupon_threshold.py -v --no-header -p no:cacheprovider",
+      "cwd": "C:\\Users\\NUDTer\\.minimax\\sessions\\mvs_9dddd53bc8a94bb18f40f55ecbc587ca\\workspace\\powercontext\\minimax",
+      "started_at": "2026-11-14T10:04:23",
+      "finished_at": "2026-11-14T10:04:24",
+      "exit_code": 0,
+      "stdout": "============================= test session starts =============================\ncollecting ... collected 5 items\n\ndemo_app/tests/test_coupon_threshold.py::test_no_threshold_discount_coupon_is_applicable PASSED [ 20%]\ndemo_app/tests/test_coupon_threshold.py::test_discount_coupon_applies_at_exact_threshold PASSED [ 40%]\ndemo_app/tests/test_coupon_threshold.py::test_no_threshold_coupon_respects_max_discount PASSED [ 60%]\ndemo_app/tests/test_coupon_threshold.py::test_no_threshold_coupon_base_excludes_freight PASSED [ 80%]\ndemo_app/tests/test_coupon_threshold.py::test_no_threshold_coupon_in_settlement PASSED [100%]\n\n============================== 5 passed in 0.30s ==============================\n",
+      "stderr": ""
+    },
+    "regression": {
+      "label": "regression",
+      "command": "C:\\Users\\NUDTer\\.minimax\\sessions\\mvs_9dddd53bc8a94bb18f40f55ecbc587ca\\workspace\\.venv\\Scripts\\python.exe -m pytest demo_app\\tests\\test_coupon_regression.py -v --no-header -p no:cacheprovider",
+      "cwd": "C:\\Users\\NUDTer\\.minimax\\sessions\\mvs_9dddd53bc8a94bb18f40f55ecbc587ca\\workspace\\powercontext\\minimax",
+      "started_at": "2026-11-14T10:04:24",
+      "finished_at": "2026-11-14T10:04:26",
+      "exit_code": 0,
+      "stdout": "============================= test session starts =============================\ncollecting ... collected 9 items\n\ndemo_app/tests/test_coupon_regression.py::test_discount_coupon_rejected_when_below_threshold PASSED [ 11%]\ndemo_app/tests/test_coupon_regression.py::test_threshold_coupon_reduces_fixed_amount PASSED [ 22%]\ndemo_app/tests/test_coupon_regression.py::test_discount_coupon_respects_max_discount PASSED [ 33%]\ndemo_app/tests/test_coupon_regression.py::test_discount_never_exceeds_subtotal PASSED [ 44%]\ndemo_app/tests/test_coupon_regression.py::test_freight_excluded_from_coupon_base PASSED [ 55%]\ndemo_app/tests/test_coupon_regression.py::test_settlement_total_includes_freight PASSED [ 66%]\ndemo_app/tests/test_coupon_regression.py::test_settlement_without_coupon PASSED [ 77%]\ndemo_app/tests/test_coupon_regression.py::test_not_applicable_error_mentions_coupon_id PASSED [ 88%]\ndemo_app/tests/test_coupon_regression.py::test_negative_threshold_coupon_is_rejected PASSED [100%]\n\n============================== 9 passed in 0.05s ==============================\n",
+      "stderr": ""
+    }
+  },
+  "state_after": {
+    "seq": 3,
+    "scope_id": "scp_2s0282qdy9j7c1k8f55h701x92",
+    "kind": "sdd-task-state",
+    "citation": null,
+    "entry_id": null,
+    "task_id": "task-coupon-threshold",
+    "server": "http://127.0.0.1:8000",
+    "logical_scope": "project:sddctx-demo"
+  },
+  "finished_at": "2026-11-14T10:04:27",
+  "success": true
+}

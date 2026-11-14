@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sddctx"
+version = "0.1.0"
+description = "面向软件持续演进的 SDD 工程上下文模块（seekdb／OceanBase + PowerContext + MiniMax）"
+requires-python = ">=3.11"
+dependencies = [
+    "pymysql>=1.1.1",
+    "httpx>=0.28",
+    "pyyaml>=6",
+]
+
+[project.optional-dependencies]
+# 嵌入式 seekdb（Windows / Linux / macOS 均有 wheel）
+embedded = ["pylibseekdb==1.4.0.post2"]
+# 任务状态存储
+powercontext = ["powercontext[client,server]==1.5.1"]
+dev = ["pytest>=8", "typer>=0.16"]
+
+[project.scripts]
+sddctx = "sddctx.cli:main"
+
+[tool.setuptools]
+packages = ["sddctx"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["demo_app/tests"]
+addopts = "-v"
