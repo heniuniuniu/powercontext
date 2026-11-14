@@ -1,0 +1,4 @@
+# 运行本项目不需要安装任何第三方依赖（Python 3.9+ 标准库即可）。
+# 仅当要连接真实 seekdb / PowerContext 服务时才需要，可选安装：
+# pymysql==1.1.1      # SEEKDB_DSN 指向真实 seekdb 时
+# requests==2.31.0    # POWERCONTEXT_URL 指向真实服务时

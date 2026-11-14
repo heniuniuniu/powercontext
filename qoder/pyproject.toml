@@ -1,0 +1,15 @@
+[project]
+name = "qoder-notes-helper"
+version = "1.0.0"
+description = "资料整理助手 · Qoder × PowerContext × seekdb（2026 OceanBase 数据库大赛 Qoder 赛题）"
+requires-python = ">=3.9"
+dependencies = []
+
+# 本项目刻意不使用打包/构建系统：评测器直接执行 `python run.py` 即可，
+# 不需要 pip install -e .，也不需要任何构建后端。
+
+[tool.notes-helper]
+entry = "main.py"
+selfcheck = "python main.py"
+serve = "python main.py --serve"
+port = 8899

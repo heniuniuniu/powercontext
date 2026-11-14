@@ -1,0 +1,7 @@
+[
+  { "query": "向量索引如何刷新", "expected": ["d_vec_refresh", "d_index_note"] },
+  { "query": "混合检索融合排序", "expected": ["d_hybrid_rrf", "d_fulltext_score"] },
+  { "query": "WebGPU 不可用时降级", "expected": ["d_wasm_fallback", "d_backend_badge"] },
+  { "query": "增量导入写入", "expected": ["d_incremental", "d_batch_upsert"] },
+  { "query": "INT8 量化模型体积", "expected": ["d_quant_int8", "d_model_size"] }
+]

@@ -1,0 +1,7 @@
+# 本项目主流程零第三方依赖：只需 Python 3.9+ 标准库。
+# `python main.py` 与 `python main.py --serve` 均可在不安装任何包的情况下完整运行。
+#
+# 下面两项仅在「接入真实 seekdb / PowerContext 服务」时可选安装，
+# 未安装时程序自动降级为内置语料 + 本地记忆文件，主流程不中断：
+# pymysql==1.1.1
+# requests==2.31.0
